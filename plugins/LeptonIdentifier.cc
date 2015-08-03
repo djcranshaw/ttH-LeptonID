@@ -414,9 +414,9 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          break;
       case preselection:
          passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
-         // passesIso = (helper_.GetMuonRelIso(mu,coneSize::R03,corrType::rhoEA) < 0.5);
+         passesIso = (helper_.GetMuonRelIso(mu,coneSize::R03,corrType::rhoEA) < 0.5);
          // passesIso = (helper_.GetMuonRelIso(mu,coneSize::miniIso,corrType::rhoEA) < 0.4);
-         passesIso = true;
+         // passesIso = true;
          if( mu.innerTrack().isAvailable() ){
             passesMuonBestTrackID = ( (fabs(mu.innerTrack()->dxy(vertex_.position())) < 0.05)
                   && (fabs(mu.innerTrack()->dz(vertex_.position())) < 0.1));
@@ -515,14 +515,14 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
             else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > 0.2 );
             else passesMVA = ( eleMvaNonTrig > -0.52 );
          }
-         if( ele.gsfTrack().isAvailable() ){
+         if (ele.gsfTrack().isAvailable()) {
             passGsfTrackID = ( (fabs(ele.gsfTrack()->dxy(vertex_.position())) < 0.05) && (fabs(ele.gsfTrack()->dz(vertex_.position())) < 0.1) && ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS) <= 1 );
          }
          passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
-         //    passesIso        =  (GetElectronRelIso(ele,coneSize::R03,corrType::rhoEA) < 0.5);
-         //passesIso        = (GetElectronRelIso(ele,coneSize::miniIso,corrType::rhoEA) < 0.4);
-         passesIso = true;
-         passesID         = ( passGsfTrackID && passesMVA);    
+         passesIso = helper_.GetElectronRelIso(ele,coneSize::R03, corrType::rhoEA) < 0.5;
+         // passesIso = (helper_.GetElectronRelIso(ele,coneSize::miniIso,corrType::rhoEA) < 0.4);
+         // passesIso = true;
+         passesID = (passGsfTrackID && passesMVA);
          break;
    }
 
@@ -551,6 +551,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
          helper_.SetVertex(v);
          vertex_ = v;
+         break;
       }
    }
 
