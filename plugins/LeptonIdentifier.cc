@@ -98,6 +98,7 @@ class LeptonIdentifier : public edm::EDProducer {
       Float_t vardz;
       Float_t varSegCompat;
 
+      edm::EDGetTokenT<double> rho_token_;
       edm::EDGetTokenT<pat::ElectronCollection> ele_token_;
       edm::EDGetTokenT<pat::JetCollection> jet_token_;
       edm::EDGetTokenT<pat::MuonCollection> mu_token_;
@@ -129,6 +130,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
 
+   rho_token_ = consumes<double>(edm::InputTag("fixedGridRhoFastjetAll"));
    ele_token_ = consumes<pat::ElectronCollection>(config.getParameter<edm::InputTag>("electrons"));
    jet_token_ = consumes<pat::JetCollection>(config.getParameter<edm::InputTag>("jets"));
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
@@ -536,15 +538,19 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    std::unique_ptr<pat::ElectronCollection> eles(new pat::ElectronCollection());
    std::unique_ptr<pat::MuonCollection> mus(new pat::MuonCollection());
 
+   edm::Handle<double> rho;
    edm::Handle<pat::ElectronCollection> input_ele;
    edm::Handle<pat::JetCollection> input_jet;
    edm::Handle<pat::MuonCollection> input_mu;
    edm::Handle<reco::VertexCollection> input_vtx;
 
+   event.getByToken(rho_token_, rho);
    event.getByToken(ele_token_, input_ele);
    event.getByToken(jet_token_, input_jet);
    event.getByToken(mu_token_, input_mu);
    event.getByToken(vtx_token_, input_vtx);
+
+   helper_.SetRho(*rho);
 
    // determine primary vertex
    for (const auto& v: *input_vtx) {
@@ -568,6 +574,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mu.addUserFloat("idPreselection", passes(mu, preselection));
       mu.addUserFloat("idLooseCut", passes(mu, looseCut));
       mu.addUserFloat("idTightCut", passes(mu, tightCut));
+      mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
       if (mu.userFloat("idPreselection") > .5) {
          mu.addUserFloat("leptonMVA", mva(mu));
          mu.addUserFloat("idLooseMVA", passes(mu, looseMVA));
@@ -584,6 +591,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       if (ele.pt() < ele_minpt_)
          continue;
       ele.addUserFloat("leptonMVA", mva(ele));
+      ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
       ele.addUserFloat("idPreselection", passes(ele, preselection));
       ele.addUserFloat("idLooseCut", passes(ele, looseCut));
       ele.addUserFloat("idLooseMVA", passes(ele, looseMVA));
