@@ -512,7 +512,7 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
          break;
       case preselection:
          //Phys14 MVA ID (only for pT > 10 GeV) for now
-         if (ele.pt() > minElectronPt) {
+         if (ele.pt() > std::max(10., minElectronPt)) {
             if ( scEta < 0.8) passesMVA = ( eleMvaNonTrig > 0.35 );
             else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > 0.2 );
             else passesMVA = ( eleMvaNonTrig > -0.52 );
