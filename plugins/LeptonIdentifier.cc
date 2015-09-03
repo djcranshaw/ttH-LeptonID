@@ -273,7 +273,7 @@ LeptonIdentifier::mva(const pat::Muon& mu)
       }
    }
    varjetDR_in = min(dR,0.5);
-   varjetPtRatio_in = min(mu.pt()/matchedJet.pt(), 1.5f);
+   varjetPtRatio_in = std::min(mu.pt()/matchedJet.pt(), 1.5);
 
    varjetBTagCSV_in = max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
    varsip3d = fabs(mu.dB(pat::Muon::PV3D)/mu.edB(pat::Muon::PV3D));
@@ -318,7 +318,7 @@ LeptonIdentifier::mva(const pat::Electron& ele)
       }
    }
    varjetDR_in = min(dR,0.5);
-   varjetPtRatio_in = min(ele.pt()/matchedJet.pt(), 1.5f);
+   varjetPtRatio_in = std::min(ele.pt()/matchedJet.pt(), 1.5);
 
    varjetBTagCSV_in = max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
    varsip3d = fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D));
