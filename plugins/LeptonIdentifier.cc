@@ -99,6 +99,7 @@ class LeptonIdentifier : public edm::EDProducer {
       Float_t varSegCompat;
 
       edm::EDGetTokenT<double> rho_token_;
+      edm::EDGetTokenT<pat::PackedCandidateCollection> packedCand_token_;
       edm::EDGetTokenT<pat::ElectronCollection> ele_token_;
       edm::EDGetTokenT<pat::JetCollection> jet_token_;
       edm::EDGetTokenT<pat::MuonCollection> mu_token_;
@@ -131,6 +132,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    produces<pat::MuonCollection>();
 
    rho_token_ = consumes<double>(edm::InputTag("fixedGridRhoFastjetAll"));
+   packedCand_token_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("packedPFCandidates"));
    ele_token_ = consumes<pat::ElectronCollection>(config.getParameter<edm::InputTag>("electrons"));
    jet_token_ = consumes<pat::JetCollection>(config.getParameter<edm::InputTag>("jets"));
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
@@ -490,18 +492,21 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    std::unique_ptr<pat::MuonCollection> mus(new pat::MuonCollection());
 
    edm::Handle<double> rho;
+   edm::Handle<pat::PackedCandidateCollection> packedCands;
    edm::Handle<pat::ElectronCollection> input_ele;
    edm::Handle<pat::JetCollection> input_jet;
    edm::Handle<pat::MuonCollection> input_mu;
    edm::Handle<reco::VertexCollection> input_vtx;
 
    event.getByToken(rho_token_, rho);
+   event.getByToken(packedCand_token_, packedCands);
    event.getByToken(ele_token_, input_ele);
    event.getByToken(jet_token_, input_jet);
    event.getByToken(mu_token_, input_mu);
    event.getByToken(vtx_token_, input_vtx);
 
    helper_.SetRho(*rho);
+   helper_.SetPackedCandidates(*packedCands);
 
    // determine primary vertex
    for (const auto& v: *input_vtx) {
@@ -518,6 +523,9 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
    auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
    jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
+
+   for (auto mu: *input_mu) helper_.addVetos(mu);
+   for (auto ele: *input_ele) helper_.addVetos(ele);
 
    for (auto mu: *input_mu) {
       if (mu.pt() < mu_minpt_) continue;
