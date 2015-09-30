@@ -5,5 +5,7 @@ ttHLeptons = cms.EDProducer('LeptonIdentifier',
         electronMinPt = cms.double(7.0),
         jets = cms.InputTag('slimmedJets'),
         muons = cms.InputTag('slimmedMuons'),
-        muonMinPt = cms.double(5.0)
+        muonMinPt = cms.double(5.0),
+        taus = cms.InputTag('slimmedTaus'),
+        tauMinPt = cms.double(20.0)
 )

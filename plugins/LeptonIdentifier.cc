@@ -65,6 +65,7 @@ class LeptonIdentifier : public edm::EDProducer {
 
       bool passes(const pat::Electron& e, ID id);
       bool passes(const pat::Muon& mu, ID id);
+      bool passes(const pat::Tau& tau, ID id);
 
       float mva(const pat::Muon& mu);
       float mva(const pat::Electron& ele);
@@ -103,6 +104,7 @@ class LeptonIdentifier : public edm::EDProducer {
       edm::EDGetTokenT<pat::ElectronCollection> ele_token_;
       edm::EDGetTokenT<pat::JetCollection> jet_token_;
       edm::EDGetTokenT<pat::MuonCollection> mu_token_;
+      edm::EDGetTokenT<pat::TauCollection> tau_token_;
       edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
 
       reco::Vertex vertex_;
@@ -110,6 +112,7 @@ class LeptonIdentifier : public edm::EDProducer {
 
       double mu_minpt_;
       double ele_minpt_;
+      double tau_minpt_;
 };
 
 //
@@ -126,7 +129,8 @@ class LeptonIdentifier : public edm::EDProducer {
 //
 LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    mu_minpt_(config.getParameter<double>("muonMinPt")),
-   ele_minpt_(config.getParameter<double>("electronMinPt"))
+   ele_minpt_(config.getParameter<double>("electronMinPt")),
+   tau_minpt_(config.getParameter<double>("tauMinPt"))
 {
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
@@ -136,6 +140,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    ele_token_ = consumes<pat::ElectronCollection>(config.getParameter<edm::InputTag>("electrons"));
    jet_token_ = consumes<pat::JetCollection>(config.getParameter<edm::InputTag>("jets"));
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
+   tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
@@ -393,7 +398,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron& ele, ID id)
 {
-   double minElectronPt = 5; // iMinPt;
+   double minElectronPt = 5.; // iMinPt;
 
    // Be skeptical about this electron making it through
    bool passesKinematics	= false;
@@ -484,18 +489,51 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
    return (passesKinematics && passesIso && passesID);
 }
 
+bool
+LeptonIdentifier::passes(const pat::Tau& tau, ID id)
+{
+   double minTauPt = 5.; // iMinPt;
+
+   bool passesKinematics = false;
+   bool passesIso        = false;
+   bool passesID         = false;
+
+   bool passesPVassoc = false;
+
+   switch (id) {
+        case preselection:
+            passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+            passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5);
+            passesPVassoc = tau.userFloat("dxy") < 1000	&& (tau.userFloat("dz") < 0.2);
+            passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+            break;
+        case looseCut:
+        case looseMVA:
+        case tightCut:
+        case tightMVA:
+            passesKinematics = true;
+            passesIso = true;
+            passesID = true;
+            break;
+   }
+
+   return (passesKinematics && passesIso && passesID);
+}
+
 // ------------ method called to produce the data  ------------
 void
 LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 {
    std::unique_ptr<pat::ElectronCollection> eles(new pat::ElectronCollection());
    std::unique_ptr<pat::MuonCollection> mus(new pat::MuonCollection());
+   std::unique_ptr<pat::TauCollection> taus(new pat::TauCollection());
 
    edm::Handle<double> rho;
    edm::Handle<pat::PackedCandidateCollection> packedCands;
    edm::Handle<pat::ElectronCollection> input_ele;
    edm::Handle<pat::JetCollection> input_jet;
    edm::Handle<pat::MuonCollection> input_mu;
+   edm::Handle<pat::TauCollection> input_tau;
    edm::Handle<reco::VertexCollection> input_vtx;
 
    event.getByToken(rho_token_, rho);
@@ -503,6 +541,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    event.getByToken(ele_token_, input_ele);
    event.getByToken(jet_token_, input_jet);
    event.getByToken(mu_token_, input_mu);
+   event.getByToken(tau_token_, input_tau);
    event.getByToken(vtx_token_, input_vtx);
 
    helper_.SetRho(*rho);
@@ -637,9 +676,29 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("idTightMVA", passes(ele, tightMVA));
       eles->push_back(ele);
    }
+   
+   for (auto tau: *input_tau) {
+      if (tau.pt() < tau_minpt_) continue;
+      
+//       pat::Jet matchedJet;
+//       double dR = 666.;
+//       for (const auto& j: jets_) {
+// 	double newDR = helper_.DeltaR(&j, &tau);
+// 	if (newDR < dR) {
+// 	  dR = newDR;
+// 	  matchedJet = j;
+// 	}
+//       }
+      
+      tau.addUserFloat("dxy",fabs(tau.leadTrack()->dxy(vertex_.position())));
+      tau.addUserFloat("dz",fabs(tau.leadTrack()->dz(vertex_.position())));
+      tau.addUserFloat("idPreselection", passes(tau, preselection));
 
+      taus->push_back(tau);
+   }
    event.put(std::move(eles));
    event.put(std::move(mus));
+   event.put(std::move(taus));
 }
 
 // ------------ method called once each job just before starting event loop  ------------
