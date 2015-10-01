@@ -134,6 +134,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
 {
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
+   produces<pat::TauCollection>();
 
    rho_token_ = consumes<double>(edm::InputTag("fixedGridRhoFastjetAll"));
    packedCand_token_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("packedPFCandidates"));
@@ -502,18 +503,16 @@ LeptonIdentifier::passes(const pat::Tau& tau, ID id)
 
    switch (id) {
         case preselection:
-            passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
-            passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5);
-            passesPVassoc = tau.userFloat("dxy") < 1000	&& (tau.userFloat("dz") < 0.2);
-            passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+            passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
+            passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits")>0.5);
+            passesPVassoc = (tau.userFloat("dxy")<1000)	&& (tau.userFloat("dz")<0.2);
+            passesID = (tau.tauID("decayModeFinding")>0.5) && passesPVassoc;
             break;
         case looseCut:
         case looseMVA:
         case tightCut:
         case tightMVA:
-            passesKinematics = true;
-            passesIso = true;
-            passesID = true;
+        default:
             break;
    }
 
@@ -690,10 +689,35 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 // 	}
 //       }
       
-      tau.addUserFloat("dxy",fabs(tau.leadTrack()->dxy(vertex_.position())));
-      tau.addUserFloat("dz",fabs(tau.leadTrack()->dz(vertex_.position())));
-      tau.addUserFloat("idPreselection", passes(tau, preselection));
+      if (tau.leadChargedHadrCand().isAvailable())
+      {
+        auto track = tau.leadChargedHadrCand()->bestTrack();
 
+        if (!track)
+        {            
+            tau.addUserFloat("dxy",-666.);
+            tau.addUserFloat("dz",-666.);
+            tau.addUserFloat("idPreselection",-666.);                        
+        
+        }
+        else
+        {
+                
+            tau.addUserFloat("dxy",fabs(track->dxy(vertex_.position())));
+            tau.addUserFloat("dz",fabs(track->dz(vertex_.position())));
+            tau.addUserFloat("idPreselection", passes(tau, preselection));
+        }
+      }
+      
+      else
+      {
+        tau.addUserFloat("dxy",-666.);
+        tau.addUserFloat("dz",-666.);
+        tau.addUserFloat("idPreselection",-666.);
+      }
+      
+      
+      
       taus->push_back(tau);
    }
    event.put(std::move(eles));
