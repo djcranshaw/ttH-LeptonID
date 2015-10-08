@@ -385,7 +385,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          break;
       case preselection:
          passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
-         passesIso = (mu.userFloat("relIso") < 0.5);
+         passesIso = (mu.userFloat("miniIso") < 0.4);
          if( mu.innerTrack().isAvailable() ){
 	   passesMuonBestTrackID = ( mu.userFloat("dxy") < 0.05	&& mu.userFloat("dz") < 0.1);
          }
@@ -472,18 +472,20 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      passesID = (passesCuts && passGsfTrackID);
      break;
    case preselection:
-     //Phys14 MVA ID (only for pT > 10 GeV) for now
+   
      if (ele.pt() > std::max(10., minElectronPt)) {
        if ( scEta < 0.8) passesMVA = ( eleMvaNonTrig > 0.35 );
        else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > 0.2 );
        else passesMVA = ( eleMvaNonTrig > -0.52 );
      }
+     
      if (ele.gsfTrack().isAvailable()) {
        passGsfTrackID = ( ele.userFloat("dxy") < 0.05 && ele.userFloat("dz") < 0.1 && ele.userFloat("numMissingHits") <= 1 );
      }
      passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
-     passesIso = ele.userFloat("relIso") < 0.5;
-     passesID = (passGsfTrackID && passesMVA);
+     
+     passesIso = ele.userFloat("miniIso") < 0.4;
+     passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D")<8);
      break;
    }
    
@@ -610,7 +612,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	}
 
       mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
-      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA));
+      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15));
       mu.addUserFloat("localChiSq",mu.combinedQuality().chi2LocalPosition);
       mu.addUserFloat("trackKink",mu.combinedQuality().trkKink);
       //lepMVA input vars
@@ -618,6 +620,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mu.addUserFloat("neutralRelIso",mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
       mu.addUserFloat("nearestJetDr",min(dR,0.5));
       mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/matchedJet.pt(), 1.5));
+      mu.addUserFloat("nearestJetPtRel",std::min(mu.pt()/matchedJet.pt(), 1.5));
       mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       mu.addUserFloat("sip3D",fabs(mu.dB(pat::Muon::PV3D)/mu.edB(pat::Muon::PV3D)));
       
@@ -652,7 +655,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       
       ele.addUserFloat("superClusterEta",abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
-      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA));
+      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15));
       ele.addUserFloat("dxy",fabs(ele.gsfTrack()->dxy(vertex_.position())));
       ele.addUserFloat("dz",fabs(ele.gsfTrack()->dz(vertex_.position())));
       ele.addUserFloat("numMissingHits",ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
@@ -661,6 +664,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("neutralRelIso",ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
       ele.addUserFloat("nearestJetDr",min(dR,0.5));
       ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/matchedJet.pt(), 1.5));
+      ele.addUserFloat("nearestJetPtRel",std::min(ele.pt()/matchedJet.pt(), 1.5));
       ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
       bool mvaDebug = false;
