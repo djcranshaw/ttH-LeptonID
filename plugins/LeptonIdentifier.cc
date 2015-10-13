@@ -386,10 +386,11 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
       case preselection:
          passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("miniIso") < 0.4);
-         if( mu.innerTrack().isAvailable() ){
-	   passesMuonBestTrackID = ( mu.userFloat("dxy") < 0.05	&& mu.userFloat("dz") < 0.1);
+         if( mu.muonBestTrack().isAvailable() ){ // innerTrack()
+	   passesMuonBestTrackID = ( (mu.userFloat("dxy")<0.05)	&& (mu.userFloat("dz")<0.1) && (mu.userFloat("sip3D")<8));
          }
-         passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon() && passesMuonBestTrackID );
+         //passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
+         passesID = mu.isLooseMuon() && passesMuonBestTrackID;
          break;
    }
 
@@ -557,7 +558,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       }
    }
 
-   const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
+   //const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
+   const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFCHSL1L2L3Residual", setup);
    helper_.SetJetCorrector(corrector);
 
    auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
@@ -566,29 +568,48 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
    for (auto mu: *input_mu) helper_.addVetos(mu);
    for (auto ele: *input_ele) helper_.addVetos(ele);
-
+    
+   
    for (auto mu: *input_mu) {
       if (mu.pt() < mu_minpt_) continue;
 
+      double L2L3_SF = 1.;
       pat::Jet matchedJet;
+      pat::Jet matchedJetL1;
       double dR = 666.;
+      
       for (const auto& j: jets_) {
 	double newDR = helper_.DeltaR(&j, &mu);
 	if (newDR < dR) {
 	  dR = newDR;
 	  matchedJet = j;
+          matchedJetL1 = j;
+          matchedJetL1.setP4(j.correctedJet(1).p4());
+          L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
+          
 	}
       }
-
+        cout << " " << endl;
+        cout << L2L3_SF << endl;
+        cout << matchedJet.correctedJet(0).p4().E() << endl;
+        cout << matchedJetL1.p4().E() << endl;
+        cout << matchedJet.correctedJet(1).p4().E() << endl;
+        cout << matchedJet.correctedJet(2).p4().E() << endl;
+        cout << matchedJet.correctedJet(3).p4().E() << endl;
+        //cout << matchedJet.correctedJet(4).p4().E() << endl;
+        cout << matchedJet.p4().E() << endl;
+        cout << " " << endl;
+        
+        
       //add members
-      if (mu.innerTrack().isAvailable())
+      if (mu.muonBestTrack().isAvailable())
 	{
-	  mu.addUserFloat("dxy",fabs(mu.innerTrack()->dxy(vertex_.position())));
-	  mu.addUserFloat("dz",fabs(mu.innerTrack()->dz(vertex_.position())));
-	  mu.addUserFloat("numValidPixelHits",mu.innerTrack()->hitPattern().numberOfValidPixelHits());
-	  mu.addUserFloat("trackerLayersWithMeasurement",mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
-	  mu.addUserFloat("chargeFlip",mu.innerTrack()->ptError()/mu.innerTrack()->pt());
-	  mu.addUserFloat("validFraction",mu.innerTrack()->validFraction());
+	  mu.addUserFloat("dxy",fabs(mu.muonBestTrack()->dxy(vertex_.position())));
+	  mu.addUserFloat("dz",fabs(mu.muonBestTrack()->dz(vertex_.position())));
+	  mu.addUserFloat("numValidPixelHits",mu.muonBestTrack()->hitPattern().numberOfValidPixelHits());
+	  mu.addUserFloat("trackerLayersWithMeasurement",mu.muonBestTrack()->hitPattern().trackerLayersWithMeasurement());
+	  mu.addUserFloat("chargeFlip",mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt());
+	  mu.addUserFloat("validFraction",mu.muonBestTrack()->validFraction());
 	}
       else
 	{
@@ -610,18 +631,38 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	  mu.addUserFloat("normalizedChiSq",-666.);
 	  mu.addUserFloat("numValidMuonHits",-666.);
 	}
-
+      
+      
+      double miniAbsIsoCharged;
+      double miniAbsIsoNeutral;
+      double rho;
+      double effArea;
+      double miniIsoR;
+      double miniAbsIsoNeutralcorr;
+      
+      
       mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
-      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15));
+      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, miniIsoR, miniAbsIsoNeutralcorr, effArea, miniAbsIsoCharged, miniAbsIsoNeutral, rho, effAreaType::spring15));
+      mu.addUserFloat("miniAbsIsoCharged", miniAbsIsoCharged);
+      mu.addUserFloat("miniAbsIsoNeutral", miniAbsIsoNeutral);
+      mu.addUserFloat("rho", rho);
+      mu.addUserFloat("effArea", effArea);
+      mu.addUserFloat("miniIsoR", miniIsoR);
+      mu.addUserFloat("miniAbsIsoNeutralcorr", miniAbsIsoNeutralcorr); 
       mu.addUserFloat("localChiSq",mu.combinedQuality().chi2LocalPosition);
       mu.addUserFloat("trackKink",mu.combinedQuality().trkKink);
       //lepMVA input vars
       mu.addUserFloat("chargedRelIso",mu.pfIsolationR03().sumChargedHadronPt/mu.pt());
       mu.addUserFloat("neutralRelIso",mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
-      mu.addUserFloat("nearestJetDr",min(dR,0.5));
-      mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/matchedJet.pt(), 1.5));
-      mu.addUserFloat("nearestJetPtRel",std::min(mu.pt()/matchedJet.pt(), 1.5));
-      mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+      mu.addUserFloat("nearestJetDr",min(dR,0.5)); // no longer used in MVA
+      
+      auto lepAwareJetp4 = (matchedJetL1.p4() - mu.p4())*L2L3_SF + mu.p4(); // "lep-aware" JEC
+      TLorentzVector muTLV = TLorentzVector(mu.px(),mu.py(),mu.pz(),mu.p4().E());
+      TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());
+      
+      mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/lepAwareJetp4.pt(), 1.5));
+      mu.addUserFloat("nearestJetPtRel",muTLV.Perp( (jetTLV-muTLV).Vect() ));
+      mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       mu.addUserFloat("sip3D",fabs(mu.dB(pat::Muon::PV3D)/mu.edB(pat::Muon::PV3D)));
       
       mu.addUserFloat("idPreselection", passes(mu, preselection));
@@ -663,7 +704,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt/ele.pt());
       ele.addUserFloat("neutralRelIso",ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
       ele.addUserFloat("nearestJetDr",min(dR,0.5));
-      ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/matchedJet.pt(), 1.5));
+      ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/matchedJet.pt(), 1.5));      
       ele.addUserFloat("nearestJetPtRel",std::min(ele.pt()/matchedJet.pt(), 1.5));
       ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
