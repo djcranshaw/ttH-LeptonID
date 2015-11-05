@@ -40,8 +40,6 @@
 
 #include "TMVA/Reader.h"
 
-#include "../interface/EGammaMvaEleEstimatorFWLite.h"
-
 //
 // class declaration
 //
@@ -75,8 +73,6 @@ class LeptonIdentifier : public edm::EDProducer {
 
       // ----------member data ---------------------------
       MiniAODHelper helper_;
-
-      EGammaMvaEleEstimatorFWLite* mvaID_;
 
       TMVA::Reader* mu_reader_high_b_;
       TMVA::Reader* mu_reader_high_e_;
@@ -157,21 +153,6 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    // methods we access, which could be spun off, anyways.
    helper_.SetUp("2015_74x", 666, analysisType::LJ, false);
 
-   mvaID_ = new EGammaMvaEleEstimatorFWLite();
-   bool useBinnedVersion_ = true;
-   std::string method_ = "BDT";
-   EGammaMvaEleEstimatorFWLite::MVAType type_ = EGammaMvaEleEstimatorFWLite::kNonTrigPhys14;
-   std::vector<std::string> mvaWeightFiles_ = {
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EB1_5_oldscenario2phys14_BDT.weights.xml",
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EB2_5_oldscenario2phys14_BDT.weights.xml",
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EE_5_oldscenario2phys14_BDT.weights.xml",
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EB1_10_oldscenario2phys14_BDT.weights.xml",
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EB2_10_oldscenario2phys14_BDT.weights.xml",
-      "EgammaAnalysis/ElectronTools/data/PHYS14/EIDmva_EE_10_oldscenario2phys14_BDT.weights.xml"
-   };
-
-   mvaID_->initialize(method_, type_, useBinnedVersion_, mvaWeightFiles_);
-
    ele_reader_high_cb_ = new TMVA::Reader( "!Color:!Silent" );
    ele_reader_high_fb_ = new TMVA::Reader( "!Color:!Silent" );
    ele_reader_high_ec_ = new TMVA::Reader( "!Color:!Silent" );
@@ -248,8 +229,6 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
 
 LeptonIdentifier::~LeptonIdentifier()
 {
-   delete mvaID_;
-
    delete ele_reader_high_cb_;
    delete ele_reader_high_fb_;
    delete ele_reader_high_ec_;
