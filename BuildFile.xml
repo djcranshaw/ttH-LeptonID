@@ -1,4 +1,5 @@
 <use name="EgammaAnalysis/ElectronTools"/>
+<use name="RecoEgamma/ElectronIdentification"/>
 <export>
   <lib name="1"/>
 </export>

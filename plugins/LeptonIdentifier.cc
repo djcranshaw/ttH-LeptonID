@@ -29,6 +29,9 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "DataFormats/Common/interface/ValueMap.h"
+
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
@@ -106,6 +109,8 @@ class LeptonIdentifier : public edm::EDProducer {
       edm::EDGetTokenT<pat::MuonCollection> mu_token_;
       edm::EDGetTokenT<pat::TauCollection> tau_token_;
       edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
+      edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
+      edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
 
       reco::Vertex vertex_;
       pat::JetCollection jets_;
@@ -113,6 +118,8 @@ class LeptonIdentifier : public edm::EDProducer {
       double mu_minpt_;
       double ele_minpt_;
       double tau_minpt_;
+
+
 };
 
 //
@@ -143,6 +150,8 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
+   mvaValuesMapToken_ = consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values"));
+   mvaCategoriesMapToken_ = consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Categories"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
    // methods we access, which could be spun off, anyways.
@@ -473,12 +482,11 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      passesID = (passesCuts && passGsfTrackID);
      break;
    case preselection:
-   
-     if (ele.pt() > std::max(7., minElectronPt)) {
-       if ( scEta < 0.8) passesMVA = ( eleMvaNonTrig > 0.35 );
-       else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > 0.2 );
-       else passesMVA = ( eleMvaNonTrig > -0.52 );
-     }
+     
+     //very loose WP
+     if ( scEta < 0.8) passesMVA = ( eleMvaNonTrig > -0.7 );
+     else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > -0.83 );
+     else passesMVA = ( eleMvaNonTrig > -0.92 );
      
      if (ele.gsfTrack().isAvailable()) {
        passGsfTrackID = ( ele.userFloat("dxy") < 0.05 && ele.userFloat("dz") < 0.1 && ele.userFloat("numMissingHits") <= 1 );
@@ -538,6 +546,9 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    edm::Handle<pat::TauCollection> input_tau;
    edm::Handle<reco::VertexCollection> input_vtx;
 
+   edm::Handle<edm::ValueMap<float>> mvaValues;
+   edm::Handle<edm::ValueMap<int>> mvaCategories;
+
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
    event.getByToken(ele_token_, input_ele);
@@ -545,6 +556,11 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    event.getByToken(mu_token_, input_mu);
    event.getByToken(tau_token_, input_tau);
    event.getByToken(vtx_token_, input_vtx);
+   event.getByToken(mvaValuesMapToken_, mvaValues);
+   event.getByToken(mvaCategoriesMapToken_, mvaCategories);
+
+   const edm::ValueMap<float> ele_mvaValues = (*mvaValues.product());
+
 
    helper_.SetRho(*rho);
    helper_.SetPackedCandidates(*packedCands);
@@ -687,7 +703,10 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mus->push_back(mu);
    }
 
+   
+   int ele_index_for_mva = 0;
    for (auto ele: *input_ele) {
+     ele_index_for_mva++;
       if (ele.pt() < ele_minpt_) continue;
       
       double L2L3_SF = 1.;
@@ -742,8 +761,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("nearestJetPtRel",eleTLV.Perp( (jetTLV-eleTLV).Vect() ));
       ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
-      bool mvaDebug = false;
-      ele.addUserFloat("eleMvaId",mvaID_->mvaValue(ele,mvaDebug));
+      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1) );
 
       ele.addUserFloat("leptonMVA", mva(ele));
 
