@@ -12,12 +12,10 @@ Installation:
     cat <<EOF >.git/info/sparse-checkout
     /.gitignore/
     /CMGTools/TTHAnalysis/data/
-    /EgammaAnalysis/ElectronTools/
     EOF
     git checkout -b CMGTools-from-CMSSW_7_4_7 cmg-central/CMGTools-from-CMSSW_7_4_7
     git clone git@github.com:cms-ttH/MiniAOD.git
     git clone git@github.com:cms-ttH/ttH-LeptonID.git ttH/LeptonID
-    gzip -d EgammaAnalysis/ElectronTools/data/PHYS14/*.gz
 
     scram b -j 8
 
