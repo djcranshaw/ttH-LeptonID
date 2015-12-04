@@ -694,9 +694,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	  matchedJet = j;
           matchedJetL1 = j;
           matchedJetL1.setP4(j.correctedJet(1).p4());
-          L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
-          
-          
+          L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();          
 	}
       }
       
@@ -733,7 +731,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	  auto lepAwareJetp4 = (matchedJetL1.p4() - ele.p4())*L2L3_SF + ele.p4(); // "lep-aware" JEC
 	  TLorentzVector eleTLV = TLorentzVector(ele.px(),ele.py(),ele.pz(),ele.p4().E());
 	  TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());            
-	  ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/matchedJet.pt(), 1.5));      
+	  ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/lepAwareJetp4.pt(), 1.5));      
 	  ele.addUserFloat("nearestJetPtRel",eleTLV.Perp( (jetTLV-eleTLV).Vect() ));
 	}
       else
