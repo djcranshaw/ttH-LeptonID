@@ -74,19 +74,14 @@ class LeptonIdentifier : public edm::EDProducer {
       // ----------member data ---------------------------
       MiniAODHelper helper_;
 
-      TMVA::Reader* mu_reader_high_b_;
-      TMVA::Reader* mu_reader_high_e_;
-      TMVA::Reader* mu_reader_medium_b_;
-      TMVA::Reader* mu_reader_medium_e_;
-      TMVA::Reader* mu_reader_low_;
-      TMVA::Reader* ele_reader_high_cb_;
-      TMVA::Reader* ele_reader_high_fb_;
-      TMVA::Reader* ele_reader_high_ec_;
-      TMVA::Reader* ele_reader_medium_cb_;
-      TMVA::Reader* ele_reader_medium_fb_;
-      TMVA::Reader* ele_reader_medium_ec_;
-      TMVA::Reader* ele_reader_low_;
+      TMVA::Reader* mu_reader_barrel_;
+      TMVA::Reader* mu_reader_endcap_;
 
+      TMVA::Reader* ele_reader_centralbarrel_;
+      TMVA::Reader* ele_reader_forwardbarrel_;
+      TMVA::Reader* ele_reader_endcap_;
+
+      Float_t varpt;
       Float_t varneuRelIso;
       Float_t varchRelIso;
       Float_t varjetDR_in;
@@ -153,55 +148,43 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    // methods we access, which could be spun off, anyways.
    helper_.SetUp("2015_74x", 666, analysisType::LJ, false);
 
-   ele_reader_high_cb_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_high_fb_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_high_ec_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_medium_cb_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_medium_fb_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_medium_ec_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_low_ = new TMVA::Reader( "!Color:!Silent" );
-
-   mu_reader_high_b_ = new TMVA::Reader( "!Color:!Silent" );
-   mu_reader_high_e_ = new TMVA::Reader( "!Color:!Silent" );
-   mu_reader_medium_b_ = new TMVA::Reader( "!Color:!Silent" );
-   mu_reader_medium_e_ = new TMVA::Reader( "!Color:!Silent" );
-   mu_reader_low_ = new TMVA::Reader( "!Color:!Silent" );
+   mu_reader_barrel_ = new TMVA::Reader( "!Color:!Silent" );
+   mu_reader_endcap_ = new TMVA::Reader( "!Color:!Silent" );
+   
+   ele_reader_centralbarrel_ = new TMVA::Reader( "!Color:!Silent" );
+   ele_reader_forwardbarrel_ = new TMVA::Reader( "!Color:!Silent" );
+   ele_reader_endcap_ = new TMVA::Reader( "!Color:!Silent" );
 
    std::vector<TMVA::Reader*> ele_mvas = {
-      ele_reader_high_cb_,
-      ele_reader_high_fb_,
-      ele_reader_high_ec_,
-      ele_reader_medium_cb_,
-      ele_reader_medium_fb_,
-      ele_reader_medium_ec_,
-      ele_reader_low_
+     ele_reader_centralbarrel_,
+     ele_reader_forwardbarrel_,
+     ele_reader_endcap_
    };
 
-   for (auto& m: ele_mvas) {
-      m->AddVariable( "LepGood_relIso03-LepGood_chargedHadRelIso03", &varneuRelIso );
-      m->AddVariable( "LepGood_chargedHadRelIso03", &varchRelIso );
-      m->AddVariable( "min(LepGood_jetDR,0.5)", &varjetDR_in );
-      m->AddVariable( "min(LepGood_jetPtRatio,1.5)", &varjetPtRatio_in );
-      m->AddVariable( "max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in );
-      m->AddVariable( "LepGood_sip3d", &varsip3d );
-      m->AddVariable( "log(abs(LepGood_dxy))", &vardxy );
-      m->AddVariable( "log(abs(LepGood_dz))", &vardz );
-      m->AddVariable( "LepGood_mvaIdPhys14", &varmvaId );
+   for (auto& m: ele_mvas) {     
+     m->AddVariable( "LepGood_pt", &varpt );
+     m->AddVariable( "LepGood_miniRelIsoCharged", &varchRelIso );
+     m->AddVariable( "LepGood_miniRelIsoNeutral", &varneuRelIso );
+     m->AddVariable( "LepGood_jetPtRelv2", &varjetDR_in );
+     m->AddVariable( "min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in );
+     m->AddVariable( "max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in );
+     m->AddVariable( "LepGood_sip3d", &varsip3d );
+     m->AddVariable( "log(abs(LepGood_dxy))", &vardxy );
+     m->AddVariable( "log(abs(LepGood_dz))", &vardz );
+     m->AddVariable( "LepGood_mvaIdPhys14", &varmvaId );
    }
 
    std::vector<TMVA::Reader*> mu_mvas = {
-      mu_reader_high_b_,
-      mu_reader_high_e_,
-      mu_reader_medium_b_,
-      mu_reader_medium_e_,
-      mu_reader_low_
+     mu_reader_barrel_,
+     mu_reader_endcap_
    };
 
    for (auto& m: mu_mvas) {
-      m->AddVariable( "LepGood_relIso03-LepGood_chargedHadRelIso03", &varneuRelIso );
-      m->AddVariable( "LepGood_chargedHadRelIso03", &varchRelIso );
-      m->AddVariable( "min(LepGood_jetDR,0.5)", &varjetDR_in );
-      m->AddVariable( "min(LepGood_jetPtRatio,1.5)", &varjetPtRatio_in );
+      m->AddVariable( "LepGood_pt", &varpt );
+      m->AddVariable( "LepGood_miniRelIsoCharged", &varchRelIso );
+      m->AddVariable( "LepGood_miniRelIsoNeutral", &varneuRelIso );
+      m->AddVariable( "LepGood_jetPtRelv2", &varjetDR_in );
+      m->AddVariable( "min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in );
       m->AddVariable( "max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in );
       m->AddVariable( "LepGood_sip3d", &varsip3d );
       m->AddVariable( "log(abs(LepGood_dxy))", &vardxy );
@@ -211,37 +194,23 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
 
    const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/CMGTools/TTHAnalysis/data/leptonMVA/tth";
 
-   mu_reader_high_b_->BookMVA("BDTG method", base + "/mu_pteta_high_b_BDTG.weights.xml");
-   mu_reader_high_e_->BookMVA("BDTG method", base + "/mu_pteta_high_e_BDTG.weights.xml");
-   mu_reader_medium_b_->BookMVA("BDTG method", base + "/mu_pteta_medium_b_BDTG.weights.xml");
-   mu_reader_medium_e_->BookMVA("BDTG method", base + "/mu_pteta_medium_e_BDTG.weights.xml");
-   mu_reader_low_->BookMVA("BDTG method", base + "/mu_pteta_low_BDTG.weights.xml");
+   mu_reader_barrel_->BookMVA("BDTG method", base + "/mu_eta_b_BDTG.weights.xml");
+   mu_reader_endcap_->BookMVA("BDTG method", base + "/mu_eta_e_BDTG.weights.xml");
 
-   ele_reader_high_cb_->BookMVA("BDTG method", base + "/el_pteta_high_cb_BDTG.weights.xml");
-   ele_reader_high_fb_->BookMVA("BDTG method", base + "/el_pteta_high_fb_BDTG.weights.xml");
-   ele_reader_high_ec_->BookMVA("BDTG method", base + "/el_pteta_high_ec_BDTG.weights.xml");
-   ele_reader_medium_cb_->BookMVA("BDTG method", base + "/el_pteta_medium_cb_BDTG.weights.xml");
-   ele_reader_medium_fb_->BookMVA("BDTG method", base + "/el_pteta_medium_fb_BDTG.weights.xml");
-   ele_reader_medium_ec_->BookMVA("BDTG method", base + "/el_pteta_medium_ec_BDTG.weights.xml");
-   ele_reader_low_->BookMVA("BDTG method", base + "/el_pteta_low_BDTG.weights.xml");
+   ele_reader_centralbarrel_->BookMVA("BDTG method", base + "/el_eta_cb_BDTG.weights.xml");
+   ele_reader_forwardbarrel_->BookMVA("BDTG method", base + "/el_eta_fb_BDTG.weights.xml");
+   ele_reader_endcap_->BookMVA("BDTG method", base + "/el_eta_ec_BDTG.weights.xml");
 }
 
 
 LeptonIdentifier::~LeptonIdentifier()
 {
-   delete ele_reader_high_cb_;
-   delete ele_reader_high_fb_;
-   delete ele_reader_high_ec_;
-   delete ele_reader_medium_cb_;
-   delete ele_reader_medium_fb_;
-   delete ele_reader_medium_ec_;
-   delete ele_reader_low_;
+  delete ele_reader_centralbarrel_;
+  delete ele_reader_forwardbarrel_;
+  delete ele_reader_endcap_;
 
-   delete mu_reader_high_b_;
-   delete mu_reader_high_e_;
-   delete mu_reader_medium_b_;
-   delete mu_reader_medium_e_;
-   delete mu_reader_low_;
+  delete mu_reader_barrel_;
+  delete mu_reader_endcap_;
 }
 
 
@@ -252,9 +221,10 @@ LeptonIdentifier::~LeptonIdentifier()
 float
 LeptonIdentifier::mva(const pat::Muon& mu)
 {
-  varchRelIso = mu.userFloat("chargedRelIso");
-  varneuRelIso = mu.userFloat("neutralRelIso");
-  varjetDR_in = mu.userFloat("nearestJetDr");
+  varpt = mu.pt();
+  varchRelIso = mu.userFloat("miniAbsIsoCharged");
+  varneuRelIso = mu.userFloat("miniAbsIsoNeutral");
+  varjetDR_in = mu.userFloat("nearestJetPtRatio");
   varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
   varjetBTagCSV_in = mu.userFloat("nearestJetCsv");
   varsip3d = mu.userFloat("sip3D");
@@ -262,27 +232,18 @@ LeptonIdentifier::mva(const pat::Muon& mu)
   vardz = log(mu.userFloat("dz"));
   varSegCompat = mu.segmentCompatibility();
 
-   if (mu.pt() <= 10){
-      return mu_reader_low_->EvaluateMVA( "BDTG method" );
-   } else if (mu.pt() > 10 && mu.pt() <= 25 && fabs(mu.eta()) < 1.5) {
-      return mu_reader_medium_b_->EvaluateMVA( "BDTG method" );
-   } else if (mu.pt() > 10 && mu.pt() <= 25 && fabs(mu.eta()) >= 1.5) {
-      return mu_reader_medium_e_->EvaluateMVA( "BDTG method" );
-   } else if (mu.pt() > 25 && fabs(mu.eta()) < 1.5) {
-      return mu_reader_high_b_->EvaluateMVA( "BDTG method" );
-   } else if (mu.pt() > 25 && fabs(mu.eta()) >= 1.5) {
-      return mu_reader_high_e_->EvaluateMVA( "BDTG method" );
-   } else {
-      return -99999.;
-   }
+  if ( fabs(mu.eta()) < 1.5 ) return mu_reader_barrel_->EvaluateMVA( "BDTG method" );
+  else return mu_reader_endcap_->EvaluateMVA( "BDTG method" );
+
 }
 
 float
 LeptonIdentifier::mva(const pat::Electron& ele)
 {
-  varneuRelIso = ele.userFloat("neutralRelIso");
-  varchRelIso = ele.userFloat("chargedRelIso");
-  varjetDR_in = ele.userFloat("nearestJetDr");
+  varpt = ele.pt();
+  varchRelIso = ele.userFloat("miniAbsIsoCharged");
+  varneuRelIso = ele.userFloat("miniAbsIsoNeutral");
+  varjetDR_in = ele.userFloat("nearestJetPtRatio");
   varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
   varjetBTagCSV_in = ele.userFloat("nearestJetCsv");
   varsip3d = ele.userFloat("sip3D");
@@ -292,23 +253,9 @@ LeptonIdentifier::mva(const pat::Electron& ele)
   
   float lepMVA;
   
-  if (ele.pt() <= 10){
-    lepMVA = ele_reader_low_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 10 && ele.pt() <= 25 && fabs(ele.eta()) < 0.8){
-    lepMVA = ele_reader_medium_cb_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 10 && ele.pt() <= 25 && fabs(ele.eta()) >= 0.8 && fabs(ele.eta()) < 1.479){
-    lepMVA = ele_reader_medium_fb_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 10 && ele.pt() <= 25 && fabs(ele.eta()) >= 1.479) {
-    lepMVA = ele_reader_medium_ec_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 25 && fabs(ele.eta()) < 0.8) {
-    lepMVA = ele_reader_high_cb_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 25 && fabs(ele.eta()) >= 0.8 && fabs(ele.eta()) < 1.479) {
-      lepMVA = ele_reader_high_fb_->EvaluateMVA( "BDTG method" );
-  } else if (ele.pt() > 25 && fabs(ele.eta()) >= 1.479) {
-    lepMVA = ele_reader_high_ec_->EvaluateMVA( "BDTG method" );
-  } else {
-    lepMVA = -99999.;
-  }
+  if ( fabs(ele.eta()) < 0.8 ) lepMVA = ele_reader_centralbarrel_->EvaluateMVA( "BDTG method" );
+  else if ( fabs(ele.eta()) >= 0.8 && fabs(ele.eta()) < 1.479 ) lepMVA = ele_reader_forwardbarrel_->EvaluateMVA( "BDTG method" );
+  else lepMVA = ele_reader_endcap_->EvaluateMVA( "BDTG method" );
   
   return lepMVA;
 }
