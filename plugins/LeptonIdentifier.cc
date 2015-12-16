@@ -555,7 +555,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
     //auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
     
-    cout << "first raw jet energy before corr: " << (*input_jet)[0].correctedJet(0).p4().E() << endl;
+   //    cout << "first raw jet energy before corr: " << (*input_jet)[0].correctedJet(0).p4().E() << endl;
     
    //const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
    //const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFCHSL1L2L3Residual", setup);
@@ -589,17 +589,17 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
           
 	}
       }
-        cout << " " << endl;
-        cout << "uncorrected (L0): " << matchedJet.correctedJet(0).p4().E() << endl;
-        //cout << matchedJetL1.p4().E() << endl;
-        cout << "corrected (L1): " << matchedJet.correctedJet(1).p4().E() << endl;
-        cout << "corrected (L2): " << matchedJet.correctedJet(2).p4().E() << endl;
-        cout << "corrected (L3): " << matchedJet.correctedJet(3).p4().E() << endl;        
-        //cout << matchedJet.correctedJet(4).p4().E() << endl;
-        cout << "final corrected: " << matchedJet.p4().E() << endl;
-        cout << "L2L3_SF: " << L2L3_SF << endl;
-        cout << "pt/eta/phi.." << matchedJet << endl;
-        cout << " " << endl;
+        // cout << " " << endl;
+        // cout << "uncorrected (L0): " << matchedJet.correctedJet(0).p4().E() << endl;
+        // //cout << matchedJetL1.p4().E() << endl;
+        // cout << "corrected (L1): " << matchedJet.correctedJet(1).p4().E() << endl;
+        // cout << "corrected (L2): " << matchedJet.correctedJet(2).p4().E() << endl;
+        // cout << "corrected (L3): " << matchedJet.correctedJet(3).p4().E() << endl;        
+        // //cout << matchedJet.correctedJet(4).p4().E() << endl;
+        // cout << "final corrected: " << matchedJet.p4().E() << endl;
+        // cout << "L2L3_SF: " << L2L3_SF << endl;
+        // cout << "pt/eta/phi.." << matchedJet << endl;
+        // cout << " " << endl;
         
         
       //add members
@@ -634,22 +634,16 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	}
       
       
-      double miniAbsIsoCharged;
-      double miniAbsIsoNeutral;
-      double rho;
-      double effArea;
-      double miniIsoR;
-      double miniAbsIsoNeutralcorr;
-      
-      
+      std::map<std::string,double> miniIso_calculation_params;
+     
       mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
-      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, miniIsoR, miniAbsIsoNeutralcorr, effArea, miniAbsIsoCharged, miniAbsIsoNeutral, rho, effAreaType::spring15));
-      mu.addUserFloat("miniAbsIsoCharged", miniAbsIsoCharged);
-      mu.addUserFloat("miniAbsIsoNeutral", miniAbsIsoNeutral);
-      mu.addUserFloat("rho", rho);
-      mu.addUserFloat("effArea", effArea);
-      mu.addUserFloat("miniIsoR", miniIsoR);
-      mu.addUserFloat("miniAbsIsoNeutralcorr", miniAbsIsoNeutralcorr); 
+      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, miniIso_calculation_params));
+      mu.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
+      mu.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
+      mu.addUserFloat("rho", miniIso_calculation_params["rho"]);
+      mu.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
+      mu.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
+      mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]); 
       mu.addUserFloat("localChiSq",mu.combinedQuality().chi2LocalPosition);
       mu.addUserFloat("trackKink",mu.combinedQuality().trkKink);
       //lepMVA input vars
@@ -707,23 +701,17 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       }
       
       
-      double miniAbsIsoCharged;
-      double miniAbsIsoNeutral;
-      double rho;
-      double effArea;
-      double miniIsoR;
-      double miniAbsIsoNeutralcorr;
-      
+      std::map<std::string,double> miniIso_calculation_params;      
+
       ele.addUserFloat("superClusterEta",abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
-//      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15));
-      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, miniIsoR, miniAbsIsoNeutralcorr, effArea, miniAbsIsoCharged, miniAbsIsoNeutral, rho, effAreaType::spring15));
-      ele.addUserFloat("miniAbsIsoCharged", miniAbsIsoCharged);
-      ele.addUserFloat("miniAbsIsoNeutral", miniAbsIsoNeutral);
-      ele.addUserFloat("rho", rho);
-      ele.addUserFloat("effArea", effArea);
-      ele.addUserFloat("miniIsoR", miniIsoR);
-      ele.addUserFloat("miniAbsIsoNeutralcorr", miniAbsIsoNeutralcorr);      
+      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, miniIso_calculation_params));
+      ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
+      ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
+      ele.addUserFloat("rho", miniIso_calculation_params["rho"]);
+      ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
+      ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
+      ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]); 
       ele.addUserFloat("dxy",fabs(ele.gsfTrack()->dxy(vertex_.position())));
       ele.addUserFloat("dz",fabs(ele.gsfTrack()->dz(vertex_.position())));
       ele.addUserFloat("numMissingHits",ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
