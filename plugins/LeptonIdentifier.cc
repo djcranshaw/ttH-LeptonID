@@ -335,7 +335,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron& ele, ID id)
 {
-   double minElectronPt = 5.; // iMinPt;
+   double minElectronPt = 7.; // iMinPt;
 
    // Be skeptical about this electron making it through
    bool passesKinematics	= false;
