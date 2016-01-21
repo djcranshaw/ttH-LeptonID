@@ -292,7 +292,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
 		    && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
          mediumID = (mu.userFloat("validFraction") >= 0.8 &&
                mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
-         passesID = (mva(mu) > 0.8 && mediumID );
+         passesID = (mva(mu) > 0.65 && mediumID );                                       /////// <<--- the MVA cut !!!
          break;
       case looseCut:
          passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
@@ -359,7 +359,7 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
    case tightMVA:
      passesKinematics = true;
      passesIso = true;
-     passesID = (mva(ele) > 0.8 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());
+     passesID = (mva(ele) > 0.65 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());  /////// <<--- the MVA cut !!!
      break;
    case looseCut:
      passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
@@ -510,10 +510,13 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    //auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
    //jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
 
+    bool useMINIAODjecs = true;
+    //if(!input_jet.jecSetsAvailable()) useMINIAODjecs = false;
+    
    jets_ = helper_.GetSelectedJets(*input_jet, 5., 2.4, jetID::none, '-'); // already corrected (?)
 
    for (auto mu: *input_mu)
-     {
+   {
        if (mu.pt() < mu_minpt_) continue;
        
        double L2L3_SF = 1.;
@@ -529,7 +532,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	       dR = newDR;
 	       matchedJet = j;
 	       matchedJetL1 = j;
-	       matchedJetL1.setP4(j.correctedJet(1).p4());
+	       
+	       if(useMINIAODjecs) matchedJetL1.setP4(j.correctedJet(1).p4());
 	       L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
 	     }
 	 }
@@ -583,23 +587,32 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mu.addUserFloat("neutralRelIso",mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
       mu.addUserFloat("nearestJetDr",min(dR,0.5)); // no longer used in MVA
       
-
-
-      if ( (matchedJet.correctedJet(0).p4() - mu.p4()).Rho() >= 1e-4 && dR <= 0.5 )
-	{
-	  auto lepAwareJetp4 = (matchedJetL1.p4() - mu.p4())*L2L3_SF + mu.p4(); // "lep-aware" JEC
-	  TLorentzVector muTLV = TLorentzVector(mu.p4().Px(),mu.p4().Py(),mu.p4().Pz(),mu.p4().E());
-	  TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());
-	  mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/lepAwareJetp4.pt(), 1.5));
-	  mu.addUserFloat("nearestJetPtRel",muTLV.Perp( (jetTLV-muTLV).Vect() )); 
+    //cout << jets_.size() << endl;
+    if(useMINIAODjecs && jets_.size()>0)
+    {
+        if ( (matchedJet.correctedJet(0).p4() - mu.p4()).Rho() >= 1e-4 && dR <= 0.5 )
+	    {
+	        auto lepAwareJetp4 = (matchedJetL1.p4() - mu.p4())*L2L3_SF + mu.p4(); // "lep-aware" JEC
+	        TLorentzVector muTLV = TLorentzVector(mu.p4().Px(),mu.p4().Py(),mu.p4().Pz(),mu.p4().E());
+	        TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());
+	        mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/lepAwareJetp4.pt(), 1.5));
+	        mu.addUserFloat("nearestJetPtRel",muTLV.Perp( (jetTLV-muTLV).Vect() )); 
+	    }
+        else
+	    {
+	        mu.addUserFloat("nearestJetPtRatio", 1.);
+	        mu.addUserFloat("nearestJetPtRel", 0.);	  
+	    }
 	}
-      else
+	else
 	{
-	  mu.addUserFloat("nearestJetPtRatio", 1.);
-	  mu.addUserFloat("nearestJetPtRel", 0.);	  
+	    mu.addUserFloat("nearestJetPtRatio", 1.);
+	    mu.addUserFloat("nearestJetPtRel", 0.);	  
 	}
-
-      mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+	
+	
+      if (jets_.size()>0) mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+      else mu.addUserFloat("nearestJetCsv",0.);
       mu.addUserFloat("sip3D",fabs(mu.dB(pat::Muon::PV3D)/mu.edB(pat::Muon::PV3D)));
       
       mu.addUserFloat("idPreselection", passes(mu, preselection));
@@ -634,9 +647,9 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	if (newDR < dR) {
 	  dR = newDR;
 	  matchedJet = j;
-          matchedJetL1 = j;
-          matchedJetL1.setP4(j.correctedJet(1).p4());
-          L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();          
+      matchedJetL1 = j;
+      if(useMINIAODjecs) matchedJetL1.setP4(j.correctedJet(1).p4());
+      L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();          
 	}
       }
       
@@ -661,22 +674,31 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("nearestJetDr",min(dR,0.5)); // no longer used in MVA
       
 
-
-      if ( (matchedJet.correctedJet(0).p4() - ele.p4()).Rho() >= 1e-4 && dR <= 0.5)
+    //cout << jets_.size() << endl;
+    if(useMINIAODjecs && jets_.size()>0)
+    {
+        if ( (matchedJet.correctedJet(0).p4() - ele.p4()).Rho() >= 1e-4 && dR <= 0.5)
+	    {
+	        auto lepAwareJetp4 = (matchedJetL1.p4() - ele.p4())*L2L3_SF + ele.p4(); // "lep-aware" JEC
+	        TLorentzVector eleTLV = TLorentzVector(ele.px(),ele.py(),ele.pz(),ele.p4().E());
+	        TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());            
+	        ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/lepAwareJetp4.pt(), 1.5));      
+	        ele.addUserFloat("nearestJetPtRel",eleTLV.Perp( (jetTLV-eleTLV).Vect() ));
+	    }
+        else
+	    {
+	        ele.addUserFloat("nearestJetPtRatio", 1.);      
+	        ele.addUserFloat("nearestJetPtRel", 0.);
+	    }
+    }
+    else
 	{
-	  auto lepAwareJetp4 = (matchedJetL1.p4() - ele.p4())*L2L3_SF + ele.p4(); // "lep-aware" JEC
-	  TLorentzVector eleTLV = TLorentzVector(ele.px(),ele.py(),ele.pz(),ele.p4().E());
-	  TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());            
-	  ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/lepAwareJetp4.pt(), 1.5));      
-	  ele.addUserFloat("nearestJetPtRel",eleTLV.Perp( (jetTLV-eleTLV).Vect() ));
+	    ele.addUserFloat("nearestJetPtRatio", 1.);      
+	    ele.addUserFloat("nearestJetPtRel", 0.);
 	}
-      else
-	{
-	  ele.addUserFloat("nearestJetPtRatio", 1.);      
-	  ele.addUserFloat("nearestJetPtRel", 0.);
-	}
-
-      ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+        
+      if (jets_.size()>0) ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+      else ele.addUserFloat("nearestJetCsv",0.);
       ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
       ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1) );
 
