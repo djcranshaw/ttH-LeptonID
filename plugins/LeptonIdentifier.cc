@@ -191,8 +191,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
       m->AddVariable( "log(abs(LepGood_dz))", &vardz );
       m->AddVariable( "LepGood_segmentCompatibility", &varSegCompat );
    }
-
-   const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/CMGTools/TTHAnalysis/data/leptonMVA/tth";
+   const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/ttH-13TeVMultiLeptons/TemplateMakers/data/CERN/lepMVA_weights";
 
    mu_reader_barrel_->BookMVA("BDTG method", base + "/mu_eta_b_BDTG.weights.xml");
    mu_reader_endcap_->BookMVA("BDTG method", base + "/mu_eta_e_BDTG.weights.xml");
