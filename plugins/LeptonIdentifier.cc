@@ -95,11 +95,13 @@ class LeptonIdentifier : public edm::EDProducer {
 
       edm::EDGetTokenT<double> rho_token_;
       edm::EDGetTokenT<pat::PackedCandidateCollection> packedCand_token_;
-      edm::EDGetTokenT<pat::ElectronCollection> ele_token_;
+      edm::EDGetTokenT<edm::View<pat::Electron>> ele_token_;
       edm::EDGetTokenT<pat::JetCollection> jet_token_;
       edm::EDGetTokenT<pat::MuonCollection> mu_token_;
       edm::EDGetTokenT<pat::TauCollection> tau_token_;
       edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
+      edm::EDGetTokenT<edm::ValueMap<float>> mva_trig_val_token_;
+      edm::EDGetTokenT<edm::ValueMap<int>> mva_trig_cat_token_;
       edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
       edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
 
@@ -136,11 +138,15 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
 
    rho_token_ = consumes<double>(config.getParameter<edm::InputTag>("rhoParam"));
    packedCand_token_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("packedPFCandidates"));
-   ele_token_ = consumes<pat::ElectronCollection>(config.getParameter<edm::InputTag>("electrons"));
+   ele_token_ = consumes<edm::View<pat::Electron>>(config.getParameter<edm::InputTag>("electrons"));
    jet_token_ = consumes<pat::JetCollection>(config.getParameter<edm::InputTag>("jets"));
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
+
+   mva_trig_val_token_ = consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Values"));
+   mva_trig_cat_token_ = consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Categories"));
+
    mvaValuesMapToken_ = consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values"));
    mvaCategoriesMapToken_ = consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Categories"));
 
@@ -465,7 +471,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
    edm::Handle<double> rho;
    edm::Handle<pat::PackedCandidateCollection> packedCands;
-   edm::Handle<pat::ElectronCollection> input_ele;
+   edm::Handle<edm::View<pat::Electron>> input_ele_raw;
    edm::Handle<pat::JetCollection> input_jet;
    edm::Handle<pat::MuonCollection> input_mu;
    edm::Handle<pat::TauCollection> input_tau;
@@ -474,18 +480,22 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    edm::Handle<edm::ValueMap<float>> mvaValues;
    edm::Handle<edm::ValueMap<int>> mvaCategories;
 
+   edm::Handle<edm::ValueMap<float>> mvaTrigValues;
+   edm::Handle<edm::ValueMap<int>> mvaTrigCategories;
+
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
-   event.getByToken(ele_token_, input_ele);
+   event.getByToken(ele_token_, input_ele_raw);
    event.getByToken(jet_token_, input_jet);
    event.getByToken(mu_token_, input_mu);
    event.getByToken(tau_token_, input_tau);
    event.getByToken(vtx_token_, input_vtx);
+   event.getByToken(mva_trig_val_token_, mvaTrigValues);
+   event.getByToken(mva_trig_cat_token_, mvaTrigCategories);
    event.getByToken(mvaValuesMapToken_, mvaValues);
    event.getByToken(mvaCategoriesMapToken_, mvaCategories);
 
    const edm::ValueMap<float> ele_mvaValues = (*mvaValues.product());
-
 
    helper_.SetRho(*rho);
    helper_.SetPackedCandidates(*packedCands);
@@ -498,6 +508,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
          break;
       }
    }
+
+   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaTrigValues, mvaTrigCategories);
 
     //auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
     
@@ -632,7 +644,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
    
    int ele_index_for_mva = 0;
-   for (auto ele: *input_ele) {
+   for (auto ele: input_ele) {
      ele_index_for_mva++;
       if (ele.pt() < ele_minpt_) continue;
       
