@@ -630,6 +630,9 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mu.addUserFloat("idLooseCut", passes(mu, looseCut));
       mu.addUserFloat("idTightCut", passes(mu, tightCut));
 
+      mu.addUserFloat("idLooseLJ", helper_.isGoodMuon(mu, 666., 0., muonID::muonTightDL, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
+      mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 666., 0., muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
+
       if (mu.userFloat("idPreselection") > .5) {
          mu.addUserFloat("leptonMVA", mva(mu));
          mu.addUserFloat("idLooseMVA", passes(mu, looseMVA));
@@ -720,6 +723,10 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("idLooseMVA", passes(ele, looseMVA));
       ele.addUserFloat("idTightCut", passes(ele, tightCut));
       ele.addUserFloat("idTightMVA", passes(ele, tightMVA));
+
+      ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 0., 666., electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
+      ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 0., 666., electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
+
       eles->push_back(ele);
    }
    
