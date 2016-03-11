@@ -297,7 +297,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
 		    && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
          mediumID = (mu.userFloat("validFraction") >= 0.8 &&
                mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
-         passesID = (mva(mu) > 0.65 && mediumID );                                       /////// <<--- the MVA cut !!!
+         passesID = (mva(mu) > 0.75 && mediumID );                                       /////// <<--- the MVA cut !!!
          break;
       case looseCut:
          passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
@@ -364,7 +364,7 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
    case tightMVA:
      passesKinematics = true;
      passesIso = true;
-     passesID = (mva(ele) > 0.65 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());  /////// <<--- the MVA cut !!!
+     passesID = (mva(ele) > 0.75 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());  /////// <<--- the MVA cut !!!
      break;
    case looseCut:
      passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
