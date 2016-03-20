@@ -233,8 +233,8 @@ LeptonIdentifier::mva(const pat::Muon& mu)
   varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
   varjetBTagCSV_in = mu.userFloat("nearestJetCsv");
   varsip3d = mu.userFloat("sip3D");
-  vardxy = log(mu.userFloat("dxy"));
-  vardz = log(mu.userFloat("dz"));
+  vardxy = log(fabs(mu.userFloat("dxy")));
+  vardz = log(fabs(mu.userFloat("dz")));
   varSegCompat = mu.segmentCompatibility();
 
   if ( fabs(mu.eta()) < 1.5 ) return mu_reader_barrel_->EvaluateMVA( "BDTG method" );
@@ -252,8 +252,8 @@ LeptonIdentifier::mva(const pat::Electron& ele)
   varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
   varjetBTagCSV_in = ele.userFloat("nearestJetCsv");
   varsip3d = ele.userFloat("sip3D");
-  vardxy = log(ele.userFloat("dxy"));
-  vardz = log(ele.userFloat("dz"));
+  vardxy = log(fabs(ele.userFloat("dxy")));
+  vardz = log(fabs(ele.userFloat("dz")));
   varmvaId = ele.userFloat("eleMvaId");
   
   float lepMVA;
@@ -303,7 +303,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("relIso") < 0.5);
          if( mu.innerTrack().isAvailable() ){
-	   passesMuonBestTrackID = (mu.userFloat("dxy") < 0.05 && mu.userFloat("dz") < 0.1);
+			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
          }
          passesID = (passesMuonBestTrackID && (mu.isGlobalMuon() || mu.isTrackerMuon()) && mu.isPFMuon());
          break;
@@ -312,7 +312,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          passesIso = (mu.userFloat("relIso") < 0.1);
 
          if( mu.innerTrack().isAvailable() && mu.globalTrack().isAvailable() ){
-	    passesMuonBestTrackID = (mu.userFloat("dxy") < 0.05 && mu.userFloat("dz") < 0.1);
+			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
             passesCuts = (mu.isGlobalMuon() && mu.isPFMuon() && 
 			  mu.userFloat("normalizedChiSq") < 10. &&
 			  mu.userFloat("numValidMuonHits") > 0 &&
@@ -327,7 +327,7 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("miniIso") < 0.4);
          if( mu.innerTrack().isAvailable() ){ // innerTrack() // muonBestTrack // isAvailable
-	   passesMuonBestTrackID = ((mu.userFloat("dxy")<0.05)	&& (mu.userFloat("dz")<0.1) && (mu.userFloat("sip3D")<8));
+			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy"))<0.05	&& fabs(mu.userFloat("dz"))<0.1 && (mu.userFloat("sip3D")<8));
          }
          //passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
          passesID = mu.isLooseMuon() && passesMuonBestTrackID;
@@ -368,7 +368,7 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      break;
    case looseCut:
      passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-     passGsfTrackID = ( ele.userFloat("dxy") < 0.05 && ele.userFloat("dz") < 0.1 && ele.userFloat("numMissingHits") <= 1 );
+     passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1 );
      passesIso        =  (ele.userFloat("relIso") < 0.5);
      if (scEta <= 1.479)
        {
@@ -389,11 +389,11 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      break;
    case tightCut:
      passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-     passGsfTrackID = ( ele.userFloat("dxy") < 0.05 &&
-			ele.userFloat("dz") < 0.1 &&
-			ele.isGsfCtfScPixChargeConsistent() &&
-			ele.userFloat("numMissingHits") == 0 && 
-			ele.userFloat("sip3D") < 4 );
+     passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 &&
+						fabs(ele.userFloat("dz")) < 0.1 &&
+						ele.isGsfCtfScPixChargeConsistent() &&
+						ele.userFloat("numMissingHits") == 0 && 
+						ele.userFloat("sip3D") < 4 );
      passesIso        =  (ele.userFloat("relIso") < 0.1);
      
      if (scEta <= 1.479) 
@@ -420,7 +420,7 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      else passesMVA = ( eleMvaNonTrig > -0.92 );
      
      if (ele.gsfTrack().isAvailable()) {
-       passGsfTrackID = ( ele.userFloat("dxy") < 0.05 && ele.userFloat("dz") < 0.1 && ele.userFloat("numMissingHits") <= 1 );
+		 passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1 );
      }
      passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
      
@@ -447,7 +447,7 @@ LeptonIdentifier::passes(const pat::Tau& tau, ID id)
         case preselection:
             passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
             passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits")>0.5);
-            passesPVassoc = (tau.userFloat("dxy")<1000)	&& (tau.userFloat("dz")<0.2);
+            passesPVassoc = (fabs(tau.userFloat("dxy"))<1000)	&& (fabs(tau.userFloat("dz"))<0.2);
             passesID = (tau.tauID("decayModeFinding")>0.5) && passesPVassoc;
             break;
         case looseCut:
@@ -552,8 +552,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       //add members
       if (mu.innerTrack().isAvailable()) // muonBestTrack
 	{
-	  mu.addUserFloat("dxy",fabs(mu.innerTrack()->dxy(vertex_.position())));
-	  mu.addUserFloat("dz",fabs(mu.innerTrack()->dz(vertex_.position())));
+	  mu.addUserFloat("dxy",mu.innerTrack()->dxy(vertex_.position()));
+	  mu.addUserFloat("dz",mu.innerTrack()->dz(vertex_.position()));
 	  mu.addUserFloat("numValidPixelHits",mu.innerTrack()->hitPattern().numberOfValidPixelHits());
 	  mu.addUserFloat("trackerLayersWithMeasurement",mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
 	  mu.addUserFloat("chargeFlip",mu.innerTrack()->ptError()/mu.innerTrack()->pt());
@@ -679,8 +679,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
       ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
       ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]); 
-      ele.addUserFloat("dxy",fabs(ele.gsfTrack()->dxy(vertex_.position())));
-      ele.addUserFloat("dz",fabs(ele.gsfTrack()->dz(vertex_.position())));
+      ele.addUserFloat("dxy",ele.gsfTrack()->dxy(vertex_.position()));
+      ele.addUserFloat("dz",ele.gsfTrack()->dz(vertex_.position()));
       ele.addUserFloat("numMissingHits",ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
       //leptonMVA vars
       ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt/ele.pt());
@@ -757,8 +757,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
         else
         {
                 
-            tau.addUserFloat("dxy",fabs(track->dxy(vertex_.position())));
-            tau.addUserFloat("dz",fabs(track->dz(vertex_.position())));
+            tau.addUserFloat("dxy",track->dxy(vertex_.position()));
+            tau.addUserFloat("dz",track->dz(vertex_.position()));
             tau.addUserFloat("idPreselection", passes(tau, preselection));
         }
       }
