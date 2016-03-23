@@ -710,8 +710,8 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 	    ele.addUserFloat("nearestJetPtRatio", 1.);      
 	    ele.addUserFloat("nearestJetPtRel", 0.);
 	}
-        
-      if (jets_.size()>0) ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+
+      if (jets_.size()>0) ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
       else ele.addUserFloat("nearestJetCsv",0.);
       ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
       ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1) );
