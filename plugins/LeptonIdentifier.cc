@@ -45,6 +45,7 @@
 //
 
 enum ID {
+   nonIsolated,
    preselection,
    looseCut,
    looseMVA,
@@ -332,6 +333,9 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          //passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
          passesID = mu.isLooseMuon() && passesMuonBestTrackID;
          break;
+      case nonIsolated:
+         edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
+         return false;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -427,6 +431,9 @@ LeptonIdentifier::passes(const pat::Electron& ele, ID id)
      passesIso = ele.userFloat("miniIso") < 0.4;
      passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D")<8) && ele.passConversionVeto();
      break;
+      case nonIsolated:
+         edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
+         return false;
    }
    
    return (passesKinematics && passesIso && passesID);
@@ -444,6 +451,12 @@ LeptonIdentifier::passes(const pat::Tau& tau, ID id)
    bool passesPVassoc = false;
 
    switch (id) {
+        case nonIsolated:
+            passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
+            passesIso = true;
+            passesPVassoc = (fabs(tau.userFloat("dxy"))<1000)	&& (fabs(tau.userFloat("dz"))<0.2);
+            passesID = (tau.tauID("decayModeFinding")>0.5) && passesPVassoc;
+            break;
         case preselection:
             passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
             passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits")>0.5);
@@ -742,23 +755,23 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 // 	  matchedJet = j;
 // 	}
 //       }
-      
+
       if (tau.leadChargedHadrCand().isAvailable())
       {
         auto track = tau.leadChargedHadrCand()->bestTrack();
 
         if (!track)
-        {            
+        {
             tau.addUserFloat("dxy",-666.);
             tau.addUserFloat("dz",-666.);
-            tau.addUserFloat("idPreselection",-666.);                        
-        
+            tau.addUserFloat("idNonIsolated",-666.);
+            tau.addUserFloat("idPreselection",-666.);
         }
         else
         {
-                
             tau.addUserFloat("dxy",track->dxy(vertex_.position()));
             tau.addUserFloat("dz",track->dz(vertex_.position()));
+            tau.addUserFloat("idNonIsolated", passes(tau, nonIsolated));
             tau.addUserFloat("idPreselection", passes(tau, preselection));
         }
       }
