@@ -1,0 +1,12 @@
+---
+Language: Cpp
+BasedOnStyle: Mozilla
+AccessModifierOffset: -3
+AlwaysBreakAfterDefinitionReturnType: true
+BreakBeforeBraces: Linux
+ColumnLimit: 150
+ConstructorInitializerIndentWidth: 6
+ContinuationIndentWidth: 3
+IndentWidth: 3
+Standard: Cpp11
+...

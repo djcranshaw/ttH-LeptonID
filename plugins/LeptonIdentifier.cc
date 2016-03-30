@@ -1,8 +1,9 @@
-// -*- C++ -*-
+// -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 3; -*-
+// vim: set expandtab shiftwidth=3:
 //
 // Package:    ttH/LeptonIdentifier
 // Class:      LeptonIdentifier
-// 
+//
 /**\class LeptonIdentifier LeptonIdentifier.cc ttH/LeptonID/plugins/LeptonIdentifier.cc
 
  Description: [one line class summary]
@@ -15,7 +16,6 @@
 //         Created:  Mon, 27 Jul 2015 12:22:46 GMT
 //
 //
-
 
 // system include files
 #include <memory>
@@ -44,82 +44,73 @@
 // class declaration
 //
 
-enum ID {
-   nonIsolated,
-   preselection,
-   looseCut,
-   looseMVA,
-   tightCut,
-   tightMVA
-};
+enum ID { nonIsolated, preselection, looseCut, looseMVA, tightCut, tightMVA };
 
-class LeptonIdentifier : public edm::EDProducer {
-   public:
-      explicit LeptonIdentifier(const edm::ParameterSet&);
-      ~LeptonIdentifier();
+class LeptonIdentifier : public edm::EDProducer
+{
+public:
+   explicit LeptonIdentifier(const edm::ParameterSet &);
+   ~LeptonIdentifier();
 
-      static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+   static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
 
-   private:
-      virtual void beginJob() override;
-      virtual void produce(edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override;
+private:
+   virtual void beginJob() override;
+   virtual void produce(edm::Event &, const edm::EventSetup &) override;
+   virtual void endJob() override;
 
-      bool passes(const pat::Electron& e, ID id);
-      bool passes(const pat::Muon& mu, ID id);
-      bool passes(const pat::Tau& tau, ID id);
+   bool passes(const pat::Electron &e, ID id);
+   bool passes(const pat::Muon &mu, ID id);
+   bool passes(const pat::Tau &tau, ID id);
 
-      float mva(const pat::Muon& mu);
-      float mva(const pat::Electron& ele);
+   float mva(const pat::Muon &mu);
+   float mva(const pat::Electron &ele);
 
-      // ----------member data ---------------------------
-      MiniAODHelper helper_;
+   // ----------member data ---------------------------
+   MiniAODHelper helper_;
 
-      TMVA::Reader* mu_reader_barrel_;
-      TMVA::Reader* mu_reader_endcap_;
+   TMVA::Reader *mu_reader_barrel_;
+   TMVA::Reader *mu_reader_endcap_;
 
-      TMVA::Reader* ele_reader_centralbarrel_;
-      TMVA::Reader* ele_reader_forwardbarrel_;
-      TMVA::Reader* ele_reader_endcap_;
+   TMVA::Reader *ele_reader_centralbarrel_;
+   TMVA::Reader *ele_reader_forwardbarrel_;
+   TMVA::Reader *ele_reader_endcap_;
 
-      Float_t varpt;
-      Float_t varneuRelIso;
-      Float_t varchRelIso;
-      Float_t varjetDR_in;
-      Float_t varjetPtRatio_in;
-      Float_t varjetBTagCSV_in;
-      Float_t varsip3d;
-      Float_t varmvaId;
-      Float_t vardxy;
-      Float_t vardz;
-      Float_t varSegCompat;
+   Float_t varpt;
+   Float_t varneuRelIso;
+   Float_t varchRelIso;
+   Float_t varjetDR_in;
+   Float_t varjetPtRatio_in;
+   Float_t varjetBTagCSV_in;
+   Float_t varsip3d;
+   Float_t varmvaId;
+   Float_t vardxy;
+   Float_t vardz;
+   Float_t varSegCompat;
 
-      edm::EDGetTokenT<double> rho_token_;
-      edm::EDGetTokenT<pat::PackedCandidateCollection> packedCand_token_;
-      edm::EDGetTokenT<edm::View<pat::Electron>> ele_token_;
-      edm::EDGetTokenT<pat::JetCollection> jet_token_;
-      edm::EDGetTokenT<pat::MuonCollection> mu_token_;
-      edm::EDGetTokenT<pat::TauCollection> tau_token_;
-      edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
-      edm::EDGetTokenT<edm::ValueMap<float>> mva_trig_val_token_;
-      edm::EDGetTokenT<edm::ValueMap<int>> mva_trig_cat_token_;
-      edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
-      edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
+   edm::EDGetTokenT<double> rho_token_;
+   edm::EDGetTokenT<pat::PackedCandidateCollection> packedCand_token_;
+   edm::EDGetTokenT<edm::View<pat::Electron>> ele_token_;
+   edm::EDGetTokenT<pat::JetCollection> jet_token_;
+   edm::EDGetTokenT<pat::MuonCollection> mu_token_;
+   edm::EDGetTokenT<pat::TauCollection> tau_token_;
+   edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mva_trig_val_token_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mva_trig_cat_token_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
 
-      reco::Vertex vertex_;
-      pat::JetCollection jets_;
+   reco::Vertex vertex_;
+   pat::JetCollection jets_;
 
-      double mu_minpt_;
-      double ele_minpt_;
-      double tau_minpt_;
-
-
+   double mu_minpt_;
+   double ele_minpt_;
+   double tau_minpt_;
 };
 
 //
 // constants, enums and typedefs
 //
-
 
 //
 // static data member definitions
@@ -128,10 +119,10 @@ class LeptonIdentifier : public edm::EDProducer {
 //
 // constructors and destructor
 //
-LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
-   mu_minpt_(config.getParameter<double>("muonMinPt")),
-   ele_minpt_(config.getParameter<double>("electronMinPt")),
-   tau_minpt_(config.getParameter<double>("tauMinPt"))
+LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
+      : mu_minpt_(config.getParameter<double>("muonMinPt")),
+        ele_minpt_(config.getParameter<double>("electronMinPt")),
+        tau_minpt_(config.getParameter<double>("tauMinPt"))
 {
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
@@ -145,58 +136,55 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
 
-   mva_trig_val_token_ = consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Values"));
-   mva_trig_cat_token_ = consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Categories"));
+   mva_trig_val_token_ =
+      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Values"));
+   mva_trig_cat_token_ =
+      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Categories"));
 
-   mvaValuesMapToken_ = consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values"));
-   mvaCategoriesMapToken_ = consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Categories"));
+   mvaValuesMapToken_ =
+      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values"));
+   mvaCategoriesMapToken_ =
+      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Categories"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
    // methods we access, which could be spun off, anyways.
    helper_.SetUp("2015_74x", 666, analysisType::LJ, false);
 
-   mu_reader_barrel_ = new TMVA::Reader( "!Color:!Silent" );
-   mu_reader_endcap_ = new TMVA::Reader( "!Color:!Silent" );
-   
-   ele_reader_centralbarrel_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_forwardbarrel_ = new TMVA::Reader( "!Color:!Silent" );
-   ele_reader_endcap_ = new TMVA::Reader( "!Color:!Silent" );
+   mu_reader_barrel_ = new TMVA::Reader("!Color:!Silent");
+   mu_reader_endcap_ = new TMVA::Reader("!Color:!Silent");
 
-   std::vector<TMVA::Reader*> ele_mvas = {
-     ele_reader_centralbarrel_,
-     ele_reader_forwardbarrel_,
-     ele_reader_endcap_
-   };
+   ele_reader_centralbarrel_ = new TMVA::Reader("!Color:!Silent");
+   ele_reader_forwardbarrel_ = new TMVA::Reader("!Color:!Silent");
+   ele_reader_endcap_ = new TMVA::Reader("!Color:!Silent");
 
-   for (auto& m: ele_mvas) {     
-     m->AddVariable( "LepGood_pt", &varpt );
-     m->AddVariable( "LepGood_miniRelIsoCharged", &varchRelIso );
-     m->AddVariable( "LepGood_miniRelIsoNeutral", &varneuRelIso );
-     m->AddVariable( "LepGood_jetPtRelv2", &varjetDR_in );
-     m->AddVariable( "min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in );
-     m->AddVariable( "max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in );
-     m->AddVariable( "LepGood_sip3d", &varsip3d );
-     m->AddVariable( "log(abs(LepGood_dxy))", &vardxy );
-     m->AddVariable( "log(abs(LepGood_dz))", &vardz );
-     m->AddVariable( "LepGood_mvaIdPhys14", &varmvaId );
+   std::vector<TMVA::Reader *> ele_mvas = { ele_reader_centralbarrel_, ele_reader_forwardbarrel_, ele_reader_endcap_ };
+
+   for (auto &m : ele_mvas) {
+      m->AddVariable("LepGood_pt", &varpt);
+      m->AddVariable("LepGood_miniRelIsoCharged", &varchRelIso);
+      m->AddVariable("LepGood_miniRelIsoNeutral", &varneuRelIso);
+      m->AddVariable("LepGood_jetPtRelv2", &varjetDR_in);
+      m->AddVariable("min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in);
+      m->AddVariable("max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in);
+      m->AddVariable("LepGood_sip3d", &varsip3d);
+      m->AddVariable("log(abs(LepGood_dxy))", &vardxy);
+      m->AddVariable("log(abs(LepGood_dz))", &vardz);
+      m->AddVariable("LepGood_mvaIdPhys14", &varmvaId);
    }
 
-   std::vector<TMVA::Reader*> mu_mvas = {
-     mu_reader_barrel_,
-     mu_reader_endcap_
-   };
+   std::vector<TMVA::Reader *> mu_mvas = { mu_reader_barrel_, mu_reader_endcap_ };
 
-   for (auto& m: mu_mvas) {
-      m->AddVariable( "LepGood_pt", &varpt );
-      m->AddVariable( "LepGood_miniRelIsoCharged", &varchRelIso );
-      m->AddVariable( "LepGood_miniRelIsoNeutral", &varneuRelIso );
-      m->AddVariable( "LepGood_jetPtRelv2", &varjetDR_in );
-      m->AddVariable( "min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in );
-      m->AddVariable( "max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in );
-      m->AddVariable( "LepGood_sip3d", &varsip3d );
-      m->AddVariable( "log(abs(LepGood_dxy))", &vardxy );
-      m->AddVariable( "log(abs(LepGood_dz))", &vardz );
-      m->AddVariable( "LepGood_segmentCompatibility", &varSegCompat );
+   for (auto &m : mu_mvas) {
+      m->AddVariable("LepGood_pt", &varpt);
+      m->AddVariable("LepGood_miniRelIsoCharged", &varchRelIso);
+      m->AddVariable("LepGood_miniRelIsoNeutral", &varneuRelIso);
+      m->AddVariable("LepGood_jetPtRelv2", &varjetDR_in);
+      m->AddVariable("min(LepGood_jetPtRatio_LepAwareJECv2,1.5)", &varjetPtRatio_in);
+      m->AddVariable("max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in);
+      m->AddVariable("LepGood_sip3d", &varsip3d);
+      m->AddVariable("log(abs(LepGood_dxy))", &vardxy);
+      m->AddVariable("log(abs(LepGood_dz))", &vardz);
+      m->AddVariable("LepGood_segmentCompatibility", &varSegCompat);
    }
    const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/ttH-13TeVMultiLeptons/TemplateMakers/data/CERN/lepMVA_weights";
 
@@ -208,103 +196,101 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet& config) :
    ele_reader_endcap_->BookMVA("BDTG method", base + "/el_eta_ec_BDTG.weights.xml");
 }
 
-
 LeptonIdentifier::~LeptonIdentifier()
 {
-  delete ele_reader_centralbarrel_;
-  delete ele_reader_forwardbarrel_;
-  delete ele_reader_endcap_;
+   delete ele_reader_centralbarrel_;
+   delete ele_reader_forwardbarrel_;
+   delete ele_reader_endcap_;
 
-  delete mu_reader_barrel_;
-  delete mu_reader_endcap_;
+   delete mu_reader_barrel_;
+   delete mu_reader_endcap_;
 }
-
 
 //
 // member functions
 //
 
 float
-LeptonIdentifier::mva(const pat::Muon& mu)
+LeptonIdentifier::mva(const pat::Muon &mu)
 {
-  varpt = mu.pt();
-  varchRelIso = mu.userFloat("miniAbsIsoCharged");
-  varneuRelIso = mu.userFloat("miniAbsIsoNeutral");
-  varjetDR_in = mu.userFloat("nearestJetPtRatio");
-  varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
-  varjetBTagCSV_in = mu.userFloat("nearestJetCsv");
-  varsip3d = mu.userFloat("sip3D");
-  vardxy = log(fabs(mu.userFloat("dxy")));
-  vardz = log(fabs(mu.userFloat("dz")));
-  varSegCompat = mu.segmentCompatibility();
+   varpt = mu.pt();
+   varchRelIso = mu.userFloat("miniAbsIsoCharged");
+   varneuRelIso = mu.userFloat("miniAbsIsoNeutral");
+   varjetDR_in = mu.userFloat("nearestJetPtRatio");
+   varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
+   varjetBTagCSV_in = mu.userFloat("nearestJetCsv");
+   varsip3d = mu.userFloat("sip3D");
+   vardxy = log(fabs(mu.userFloat("dxy")));
+   vardz = log(fabs(mu.userFloat("dz")));
+   varSegCompat = mu.segmentCompatibility();
 
-  if ( fabs(mu.eta()) < 1.5 ) return mu_reader_barrel_->EvaluateMVA( "BDTG method" );
-  else return mu_reader_endcap_->EvaluateMVA( "BDTG method" );
-
+   if (fabs(mu.eta()) < 1.5)
+      return mu_reader_barrel_->EvaluateMVA("BDTG method");
+   else
+      return mu_reader_endcap_->EvaluateMVA("BDTG method");
 }
 
 float
-LeptonIdentifier::mva(const pat::Electron& ele)
+LeptonIdentifier::mva(const pat::Electron &ele)
 {
-  varpt = ele.pt();
-  varchRelIso = ele.userFloat("miniAbsIsoCharged");
-  varneuRelIso = ele.userFloat("miniAbsIsoNeutral");
-  varjetDR_in = ele.userFloat("nearestJetPtRatio");
-  varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
-  varjetBTagCSV_in = ele.userFloat("nearestJetCsv");
-  varsip3d = ele.userFloat("sip3D");
-  vardxy = log(fabs(ele.userFloat("dxy")));
-  vardz = log(fabs(ele.userFloat("dz")));
-  varmvaId = ele.userFloat("eleMvaId");
-  
-  float lepMVA;
-  
-  if ( fabs(ele.eta()) < 0.8 ) lepMVA = ele_reader_centralbarrel_->EvaluateMVA( "BDTG method" );
-  else if ( fabs(ele.eta()) >= 0.8 && fabs(ele.eta()) < 1.479 ) lepMVA = ele_reader_forwardbarrel_->EvaluateMVA( "BDTG method" );
-  else lepMVA = ele_reader_endcap_->EvaluateMVA( "BDTG method" );
-  
-  return lepMVA;
+   varpt = ele.pt();
+   varchRelIso = ele.userFloat("miniAbsIsoCharged");
+   varneuRelIso = ele.userFloat("miniAbsIsoNeutral");
+   varjetDR_in = ele.userFloat("nearestJetPtRatio");
+   varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
+   varjetBTagCSV_in = ele.userFloat("nearestJetCsv");
+   varsip3d = ele.userFloat("sip3D");
+   vardxy = log(fabs(ele.userFloat("dxy")));
+   vardz = log(fabs(ele.userFloat("dz")));
+   varmvaId = ele.userFloat("eleMvaId");
+
+   float lepMVA;
+
+   if (fabs(ele.eta()) < 0.8)
+      lepMVA = ele_reader_centralbarrel_->EvaluateMVA("BDTG method");
+   else if (fabs(ele.eta()) >= 0.8 && fabs(ele.eta()) < 1.479)
+      lepMVA = ele_reader_forwardbarrel_->EvaluateMVA("BDTG method");
+   else
+      lepMVA = ele_reader_endcap_->EvaluateMVA("BDTG method");
+
+   return lepMVA;
 }
 
 // ------------ id functions ------------
 bool
-LeptonIdentifier::passes(const pat::Muon& mu, ID id)
+LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
    double minMuonPt = 5.0; // iMinPt;
 
    bool passesKinematics = false;
-   bool passesIso        = false;
-   bool passesID         = false;
+   bool passesIso = false;
+   bool passesID = false;
 
    bool passesMuonBestTrackID = false;
-   bool mediumID              = false;
-   bool goodGlb               = false;
+   bool mediumID = false;
+   bool goodGlb = false;
    bool passesCuts = false;
 
    switch (id) {
       case looseMVA:
          passesKinematics = true;
          passesIso = true;
-         goodGlb = (mu.isGlobalMuon() &&  mu.userFloat("normalizedChiSq") < 3
-		    && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
-         mediumID = (mu.userFloat("validFraction") >= 0.8 &&
-               mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
-         passesID = (mva(mu) > 0.5 && mediumID );
+         goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
+         mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
+         passesID = (mva(mu) > 0.5 && mediumID);
          break;
       case tightMVA:
          passesKinematics = true;
          passesIso = true;
-         goodGlb = (mu.isGlobalMuon() &&  mu.userFloat("normalizedChiSq") < 3
-		    && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
-         mediumID = (mu.userFloat("validFraction") >= 0.8 &&
-               mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
-         passesID = (mva(mu) > 0.75 && mediumID );                                       /////// <<--- the MVA cut !!!
+         goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
+         mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
+         passesID = (mva(mu) > 0.75 && mediumID); /////// <<--- the MVA cut !!!
          break;
       case looseCut:
          passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("relIso") < 0.5);
-         if( mu.innerTrack().isAvailable() ){
-			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
+         if (mu.innerTrack().isAvailable()) {
+            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
          }
          passesID = (passesMuonBestTrackID && (mu.isGlobalMuon() || mu.isTrackerMuon()) && mu.isPFMuon());
          break;
@@ -312,25 +298,21 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
          passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("relIso") < 0.1);
 
-         if( mu.innerTrack().isAvailable() && mu.globalTrack().isAvailable() ){
-			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
-            passesCuts = (mu.isGlobalMuon() && mu.isPFMuon() && 
-			  mu.userFloat("normalizedChiSq") < 10. &&
-			  mu.userFloat("numValidMuonHits") > 0 &&
-			  mu.numberOfMatchedStations() > 1 &&
-			  mu.userFloat("numValidPixelHits") > 0 &&
-			  mu.userFloat("trackerLayersWithMeasurement") > 5 && 
-			  mu.userFloat("sip3D") < 4.);
+         if (mu.innerTrack().isAvailable() && mu.globalTrack().isAvailable()) {
+            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
+            passesCuts = (mu.isGlobalMuon() && mu.isPFMuon() && mu.userFloat("normalizedChiSq") < 10. && mu.userFloat("numValidMuonHits") > 0 &&
+                          mu.numberOfMatchedStations() > 1 && mu.userFloat("numValidPixelHits") > 0 &&
+                          mu.userFloat("trackerLayersWithMeasurement") > 5 && mu.userFloat("sip3D") < 4.);
          }
          passesID = (passesMuonBestTrackID && passesCuts);
          break;
       case preselection:
          passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
          passesIso = (mu.userFloat("miniIso") < 0.4);
-         if( mu.innerTrack().isAvailable() ){ // innerTrack() // muonBestTrack // isAvailable
-			 passesMuonBestTrackID = (fabs(mu.userFloat("dxy"))<0.05	&& fabs(mu.userFloat("dz"))<0.1 && (mu.userFloat("sip3D")<8));
+         if (mu.innerTrack().isAvailable()) { // innerTrack() // muonBestTrack // isAvailable
+            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1 && (mu.userFloat("sip3D") < 8));
          }
-         //passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
+         // passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
          passesID = mu.isLooseMuon() && passesMuonBestTrackID;
          break;
       case nonIsolated:
@@ -342,133 +324,118 @@ LeptonIdentifier::passes(const pat::Muon& mu, ID id)
 }
 
 bool
-LeptonIdentifier::passes(const pat::Electron& ele, ID id)
+LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
    double minElectronPt = 7.; // iMinPt;
 
    // Be skeptical about this electron making it through
-   bool passesKinematics	= false;
-   bool passesIso        = false;
-   bool passesID         = false;
+   bool passesKinematics = false;
+   bool passesIso = false;
+   bool passesID = false;
 
    bool passGsfTrackID = false;
-   bool passesCuts = false; 
+   bool passesCuts = false;
 
    bool passesMVA = false;
 
    double eleMvaNonTrig = ele.userFloat("eleMvaId");
    float scEta = ele.userFloat("superClusterEta");
 
-   switch(id){
-   case looseMVA:
-     passesKinematics = true;
-     passesIso = true;
-     passesID = (mva(ele) > 0.5 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());
-     break;
-   case tightMVA:
-     passesKinematics = true;
-     passesIso = true;
-     passesID = (mva(ele) > 0.75 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());  /////// <<--- the MVA cut !!!
-     break;
-   case looseCut:
-     passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-     passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1 );
-     passesIso        =  (ele.userFloat("relIso") < 0.5);
-     if (scEta <= 1.479)
-       {
-	 passesCuts = ( fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 &&
-			fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.8 &&
-			ele.full5x5_sigmaIetaIeta() < 0.01 &&
-			ele.hadronicOverEm() < 0.15
-			);
-       }
-     else if (scEta > 1.479 && scEta < 2.5)
-       {
-	 passesCuts = ( fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.01 &&
-			fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.7 &&
-			ele.full5x5_sigmaIetaIeta() < 0.03
-			);
-       }
-     passesID = (passesCuts && passGsfTrackID);
-     break;
-   case tightCut:
-     passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-     passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 &&
-						fabs(ele.userFloat("dz")) < 0.1 &&
-						ele.isGsfCtfScPixChargeConsistent() &&
-						ele.userFloat("numMissingHits") == 0 && 
-						ele.userFloat("sip3D") < 4 );
-     passesIso        =  (ele.userFloat("relIso") < 0.1);
-     
-     if (scEta <= 1.479) 
-       {
-	 passesCuts = ( fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.004 &&
-			fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.06 &&
-			ele.full5x5_sigmaIetaIeta() < 0.01 &&
-			ele.hadronicOverEm() < 0.12);
-       }
-     else if (scEta > 1.479 && scEta < 2.5)
-       {
-	 passesCuts = ( fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 &&
-			fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.03 &&
-			ele.full5x5_sigmaIetaIeta() < 0.03 && 
-			ele.hadronicOverEm() < 0.10);
-       }
-     passesID = (passesCuts && passGsfTrackID);
-     break;
-   case preselection:
-     
-     //very loose WP
-     if ( scEta < 0.8) passesMVA = ( eleMvaNonTrig > -0.7 );
-     else if ( scEta < 1.479) passesMVA = ( eleMvaNonTrig > -0.83 );
-     else passesMVA = ( eleMvaNonTrig > -0.92 );
-     
-     if (ele.gsfTrack().isAvailable()) {
-		 passGsfTrackID = ( fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1 );
-     }
-     passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
-     
-     passesIso = ele.userFloat("miniIso") < 0.4;
-     passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D")<8) && ele.passConversionVeto();
-     break;
+   switch (id) {
+      case looseMVA:
+         passesKinematics = true;
+         passesIso = true;
+         passesID = (mva(ele) > 0.5 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());
+         break;
+      case tightMVA:
+         passesKinematics = true;
+         passesIso = true;
+         passesID = (mva(ele) > 0.75 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto()); /////// <<--- the MVA cut !!!
+         break;
+      case looseCut:
+         passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
+         passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1);
+         passesIso = (ele.userFloat("relIso") < 0.5);
+         if (scEta <= 1.479) {
+            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.8 &&
+                          ele.full5x5_sigmaIetaIeta() < 0.01 && ele.hadronicOverEm() < 0.15);
+         } else if (scEta > 1.479 && scEta < 2.5) {
+            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.01 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.7 &&
+                          ele.full5x5_sigmaIetaIeta() < 0.03);
+         }
+         passesID = (passesCuts && passGsfTrackID);
+         break;
+      case tightCut:
+         passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
+         passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.isGsfCtfScPixChargeConsistent() &&
+                           ele.userFloat("numMissingHits") == 0 && ele.userFloat("sip3D") < 4);
+         passesIso = (ele.userFloat("relIso") < 0.1);
+
+         if (scEta <= 1.479) {
+            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.004 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.06 &&
+                          ele.full5x5_sigmaIetaIeta() < 0.01 && ele.hadronicOverEm() < 0.12);
+         } else if (scEta > 1.479 && scEta < 2.5) {
+            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.03 &&
+                          ele.full5x5_sigmaIetaIeta() < 0.03 && ele.hadronicOverEm() < 0.10);
+         }
+         passesID = (passesCuts && passGsfTrackID);
+         break;
+      case preselection:
+
+         // very loose WP
+         if (scEta < 0.8)
+            passesMVA = (eleMvaNonTrig > -0.7);
+         else if (scEta < 1.479)
+            passesMVA = (eleMvaNonTrig > -0.83);
+         else
+            passesMVA = (eleMvaNonTrig > -0.92);
+
+         if (ele.gsfTrack().isAvailable()) {
+            passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1);
+         }
+         passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
+
+         passesIso = ele.userFloat("miniIso") < 0.4;
+         passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D") < 8) && ele.passConversionVeto();
+         break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
          return false;
    }
-   
+
    return (passesKinematics && passesIso && passesID);
 }
 
 bool
-LeptonIdentifier::passes(const pat::Tau& tau, ID id)
+LeptonIdentifier::passes(const pat::Tau &tau, ID id)
 {
    double minTauPt = 5.; // iMinPt;
 
    bool passesKinematics = false;
-   bool passesIso        = false;
-   bool passesID         = false;
+   bool passesIso = false;
+   bool passesID = false;
 
    bool passesPVassoc = false;
 
    switch (id) {
-        case nonIsolated:
-            passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
-            passesIso = true;
-            passesPVassoc = (fabs(tau.userFloat("dxy"))<1000)	&& (fabs(tau.userFloat("dz"))<0.2);
-            passesID = (tau.tauID("decayModeFinding")>0.5) && passesPVassoc;
-            break;
-        case preselection:
-            passesKinematics = ((tau.pt()>minTauPt) && (fabs(tau.eta())<2.3));
-            passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits")>0.5);
-            passesPVassoc = (fabs(tau.userFloat("dxy"))<1000)	&& (fabs(tau.userFloat("dz"))<0.2);
-            passesID = (tau.tauID("decayModeFinding")>0.5) && passesPVassoc;
-            break;
-        case looseCut:
-        case looseMVA:
-        case tightCut:
-        case tightMVA:
-        default:
-            break;
+      case nonIsolated:
+         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+         passesIso = true;
+         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
+         passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         break;
+      case preselection:
+         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+         passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5);
+         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
+         passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         break;
+      case looseCut:
+      case looseMVA:
+      case tightCut:
+      case tightMVA:
+      default:
+         break;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -476,7 +443,7 @@ LeptonIdentifier::passes(const pat::Tau& tau, ID id)
 
 // ------------ method called to produce the data  ------------
 void
-LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
+LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 {
    std::unique_ptr<pat::ElectronCollection> eles(new pat::ElectronCollection());
    std::unique_ptr<pat::MuonCollection> mus(new pat::MuonCollection());
@@ -514,7 +481,7 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
    helper_.SetPackedCandidates(*packedCands);
 
    // determine primary vertex
-   for (const auto& v: *input_vtx) {
+   for (const auto &v : *input_vtx) {
       if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
          helper_.SetVertex(v);
          vertex_ = v;
@@ -524,78 +491,71 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
    auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaTrigValues, mvaTrigCategories);
 
-    //auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
-    
-   //    cout << "first raw jet energy before corr: " << (*input_jet)[0].correctedJet(0).p4().E() << endl;
-   //const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
-   //const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFCHSL1L2L3Residual", setup);
-   //helper_.SetJetCorrector(corrector);
-   //auto raw_jets = helper_.GetUncorrectedJets(*input_jet);   
-   //auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
-   //jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
+   // auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
 
-    bool useMINIAODjecs = true;
-    //if(!input_jet.jecSetsAvailable()) useMINIAODjecs = false;
-    
+   //    cout << "first raw jet energy before corr: " << (*input_jet)[0].correctedJet(0).p4().E() << endl;
+   // const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
+   // const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFCHSL1L2L3Residual", setup);
+   // helper_.SetJetCorrector(corrector);
+   // auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
+   // auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
+   // jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
+
+   bool useMINIAODjecs = true;
+   // if(!input_jet.jecSetsAvailable()) useMINIAODjecs = false;
+
    jets_ = helper_.GetSelectedJets(*input_jet, 5., 2.4, jetID::none, '-'); // already corrected (?)
 
-   for (auto mu: *input_mu)
-   {
-       if (mu.pt() < mu_minpt_) continue;
-       
-       double L2L3_SF = 1.;
-       pat::Jet matchedJet;
-       pat::Jet matchedJetL1;
-       double dR = 666.;
-       
-       for (const auto& j: jets_) 
-	 {
-	   double newDR = helper_.DeltaR(&j, &mu);
-	   if (newDR < dR)
-	     {
-	       dR = newDR;
-	       matchedJet = j;
-	       matchedJetL1 = j;
-	       
-	       if(useMINIAODjecs) matchedJetL1.setP4(j.correctedJet(1).p4());
-	       L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
-	     }
-	 }
-        
-      //add members
-      if (mu.innerTrack().isAvailable()) // muonBestTrack
-	{
-	  mu.addUserFloat("dxy",mu.innerTrack()->dxy(vertex_.position()));
-	  mu.addUserFloat("dz",mu.innerTrack()->dz(vertex_.position()));
-	  mu.addUserFloat("numValidPixelHits",mu.innerTrack()->hitPattern().numberOfValidPixelHits());
-	  mu.addUserFloat("trackerLayersWithMeasurement",mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
-	  mu.addUserFloat("chargeFlip",mu.innerTrack()->ptError()/mu.innerTrack()->pt());
-	  mu.addUserFloat("validFraction",mu.innerTrack()->validFraction());
-	}
-      else
-	{
-	  mu.addUserFloat("dxy",-666.);
-	  mu.addUserFloat("dz",-666.);
-	  mu.addUserFloat("numValidPixelHits",-666.);
-	  mu.addUserFloat("trackerLayersWithMeasurement",-666.);
-	  mu.addUserFloat("chargeFlip",-666.);
-	  mu.addUserFloat("validFraction",-666.);
-	}
+   for (auto mu : *input_mu) {
+      if (mu.pt() < mu_minpt_)
+         continue;
 
-      if (mu.globalTrack().isAvailable())
-	{
-	  mu.addUserFloat("normalizedChiSq",mu.globalTrack()->normalizedChi2());
-	  mu.addUserFloat("numValidMuonHits",mu.globalTrack()->hitPattern().numberOfValidMuonHits());
-	}
-      else
-	{
-	  mu.addUserFloat("normalizedChiSq",-666.);
-	  mu.addUserFloat("numValidMuonHits",-666.);
-	}
-      
-      
-      std::map<std::string,double> miniIso_calculation_params;
-     
+      double L2L3_SF = 1.;
+      pat::Jet matchedJet;
+      pat::Jet matchedJetL1;
+      double dR = 666.;
+
+      for (const auto &j : jets_) {
+         double newDR = helper_.DeltaR(&j, &mu);
+         if (newDR < dR) {
+            dR = newDR;
+            matchedJet = j;
+            matchedJetL1 = j;
+
+            if (useMINIAODjecs)
+               matchedJetL1.setP4(j.correctedJet(1).p4());
+            L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
+         }
+      }
+
+      // add members
+      if (mu.innerTrack().isAvailable()) // muonBestTrack
+      {
+         mu.addUserFloat("dxy", mu.innerTrack()->dxy(vertex_.position()));
+         mu.addUserFloat("dz", mu.innerTrack()->dz(vertex_.position()));
+         mu.addUserFloat("numValidPixelHits", mu.innerTrack()->hitPattern().numberOfValidPixelHits());
+         mu.addUserFloat("trackerLayersWithMeasurement", mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
+         mu.addUserFloat("chargeFlip", mu.innerTrack()->ptError() / mu.innerTrack()->pt());
+         mu.addUserFloat("validFraction", mu.innerTrack()->validFraction());
+      } else {
+         mu.addUserFloat("dxy", -666.);
+         mu.addUserFloat("dz", -666.);
+         mu.addUserFloat("numValidPixelHits", -666.);
+         mu.addUserFloat("trackerLayersWithMeasurement", -666.);
+         mu.addUserFloat("chargeFlip", -666.);
+         mu.addUserFloat("validFraction", -666.);
+      }
+
+      if (mu.globalTrack().isAvailable()) {
+         mu.addUserFloat("normalizedChiSq", mu.globalTrack()->normalizedChi2());
+         mu.addUserFloat("numValidMuonHits", mu.globalTrack()->hitPattern().numberOfValidMuonHits());
+      } else {
+         mu.addUserFloat("normalizedChiSq", -666.);
+         mu.addUserFloat("numValidMuonHits", -666.);
+      }
+
+      std::map<std::string, double> miniIso_calculation_params;
+
       mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
       mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, miniIso_calculation_params));
       mu.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
@@ -603,42 +563,37 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mu.addUserFloat("rho", miniIso_calculation_params["rho"]);
       mu.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
       mu.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]); 
-      mu.addUserFloat("localChiSq",mu.combinedQuality().chi2LocalPosition);
-      mu.addUserFloat("trackKink",mu.combinedQuality().trkKink);
-      //lepMVA input vars
-      mu.addUserFloat("chargedRelIso",mu.pfIsolationR03().sumChargedHadronPt/mu.pt());
-      mu.addUserFloat("neutralRelIso",mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
-      mu.addUserFloat("nearestJetDr",min(dR,0.5)); // no longer used in MVA
-      
-    //cout << jets_.size() << endl;
-    if(useMINIAODjecs && jets_.size()>0)
-    {
-        if ( (matchedJet.correctedJet(0).p4() - mu.p4()).Rho() >= 1e-4 && dR <= 0.5 )
-	    {
-	        auto lepAwareJetp4 = (matchedJetL1.p4() - mu.p4())*L2L3_SF + mu.p4(); // "lep-aware" JEC
-	        TLorentzVector muTLV = TLorentzVector(mu.p4().Px(),mu.p4().Py(),mu.p4().Pz(),mu.p4().E());
-	        TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());
-	        mu.addUserFloat("nearestJetPtRatio",std::min(mu.pt()/lepAwareJetp4.pt(), 1.5));
-	        mu.addUserFloat("nearestJetPtRel",muTLV.Perp( (jetTLV-muTLV).Vect() )); 
-	    }
-        else
-	    {
-	        mu.addUserFloat("nearestJetPtRatio", 1.);
-	        mu.addUserFloat("nearestJetPtRel", 0.);	  
-	    }
-	}
-	else
-	{
-	    mu.addUserFloat("nearestJetPtRatio", 1.);
-	    mu.addUserFloat("nearestJetPtRel", 0.);	  
-	}
-	
-	
-      if (jets_.size()>0) mu.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
-      else mu.addUserFloat("nearestJetCsv",0.);
-      mu.addUserFloat("sip3D",fabs(mu.dB(pat::Muon::PV3D)/mu.edB(pat::Muon::PV3D)));
-      
+      mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
+      mu.addUserFloat("localChiSq", mu.combinedQuality().chi2LocalPosition);
+      mu.addUserFloat("trackKink", mu.combinedQuality().trkKink);
+      // lepMVA input vars
+      mu.addUserFloat("chargedRelIso", mu.pfIsolationR03().sumChargedHadronPt / mu.pt());
+      mu.addUserFloat("neutralRelIso", mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
+      mu.addUserFloat("nearestJetDr", min(dR, 0.5)); // no longer used in MVA
+
+      // cout << jets_.size() << endl;
+      if (useMINIAODjecs && jets_.size() > 0) {
+         if ((matchedJet.correctedJet(0).p4() - mu.p4()).Rho() >= 1e-4 && dR <= 0.5) {
+            auto lepAwareJetp4 = (matchedJetL1.p4() - mu.p4()) * L2L3_SF + mu.p4(); // "lep-aware" JEC
+            TLorentzVector muTLV = TLorentzVector(mu.p4().Px(), mu.p4().Py(), mu.p4().Pz(), mu.p4().E());
+            TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(), lepAwareJetp4.Py(), lepAwareJetp4.Pz(), lepAwareJetp4.E());
+            mu.addUserFloat("nearestJetPtRatio", std::min(mu.pt() / lepAwareJetp4.pt(), 1.5));
+            mu.addUserFloat("nearestJetPtRel", muTLV.Perp((jetTLV - muTLV).Vect()));
+         } else {
+            mu.addUserFloat("nearestJetPtRatio", 1.);
+            mu.addUserFloat("nearestJetPtRel", 0.);
+         }
+      } else {
+         mu.addUserFloat("nearestJetPtRatio", 1.);
+         mu.addUserFloat("nearestJetPtRel", 0.);
+      }
+
+      if (jets_.size() > 0)
+         mu.addUserFloat("nearestJetCsv", max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+      else
+         mu.addUserFloat("nearestJetCsv", 0.);
+      mu.addUserFloat("sip3D", fabs(mu.dB(pat::Muon::PV3D) / mu.edB(pat::Muon::PV3D)));
+
       mu.addUserFloat("idPreselection", passes(mu, preselection));
       mu.addUserFloat("idLooseCut", passes(mu, looseCut));
       mu.addUserFloat("idTightCut", passes(mu, tightCut));
@@ -658,76 +613,72 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
       mus->push_back(mu);
    }
 
-   
    int ele_index_for_mva = 0;
-   for (auto ele: input_ele) {
-     ele_index_for_mva++;
-      if (ele.pt() < ele_minpt_) continue;
-      
+   for (auto ele : input_ele) {
+      ele_index_for_mva++;
+      if (ele.pt() < ele_minpt_)
+         continue;
+
       double L2L3_SF = 1.;
       pat::Jet matchedJet;
       pat::Jet matchedJetL1;
       double dR = 666.;
 
-      for (const auto& j: jets_) {
-	double newDR = helper_.DeltaR(&j, &ele);
-	if (newDR < dR) {
-	  dR = newDR;
-	  matchedJet = j;
-      matchedJetL1 = j;
-      if(useMINIAODjecs) matchedJetL1.setP4(j.correctedJet(1).p4());
-      L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();          
-	}
+      for (const auto &j : jets_) {
+         double newDR = helper_.DeltaR(&j, &ele);
+         if (newDR < dR) {
+            dR = newDR;
+            matchedJet = j;
+            matchedJetL1 = j;
+            if (useMINIAODjecs)
+               matchedJetL1.setP4(j.correctedJet(1).p4());
+            L2L3_SF = matchedJet.p4().E() / matchedJetL1.p4().E();
+         }
       }
-      
-      
-      std::map<std::string,double> miniIso_calculation_params;      
 
-      ele.addUserFloat("superClusterEta",abs(ele.superCluster()->position().eta()));
+      std::map<std::string, double> miniIso_calculation_params;
+
+      ele.addUserFloat("superClusterEta", abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
-      ele.addUserFloat("miniIso", helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, miniIso_calculation_params));
+      ele.addUserFloat("miniIso",
+                       helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, miniIso_calculation_params));
       ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
       ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
       ele.addUserFloat("rho", miniIso_calculation_params["rho"]);
       ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
       ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]); 
-      ele.addUserFloat("dxy",ele.gsfTrack()->dxy(vertex_.position()));
-      ele.addUserFloat("dz",ele.gsfTrack()->dz(vertex_.position()));
-      ele.addUserFloat("numMissingHits",ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
-      //leptonMVA vars
-      ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt/ele.pt());
-      ele.addUserFloat("neutralRelIso",ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
-      ele.addUserFloat("nearestJetDr",min(dR,0.5)); // no longer used in MVA
-      
+      ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
+      ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
+      ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
+      ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
+      // leptonMVA vars
+      ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt / ele.pt());
+      ele.addUserFloat("neutralRelIso", ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
+      ele.addUserFloat("nearestJetDr", min(dR, 0.5)); // no longer used in MVA
 
-    //cout << jets_.size() << endl;
-    if(useMINIAODjecs && jets_.size()>0)
-    {
-        if ( (matchedJet.correctedJet(0).p4() - ele.p4()).Rho() >= 1e-4 && dR <= 0.5)
-	    {
-	        auto lepAwareJetp4 = (matchedJetL1.p4() - ele.p4())*L2L3_SF + ele.p4(); // "lep-aware" JEC
-	        TLorentzVector eleTLV = TLorentzVector(ele.px(),ele.py(),ele.pz(),ele.p4().E());
-	        TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(),lepAwareJetp4.Py(),lepAwareJetp4.Pz(),lepAwareJetp4.E());            
-	        ele.addUserFloat("nearestJetPtRatio",std::min(ele.pt()/lepAwareJetp4.pt(), 1.5));      
-	        ele.addUserFloat("nearestJetPtRel",eleTLV.Perp( (jetTLV-eleTLV).Vect() ));
-	    }
-        else
-	    {
-	        ele.addUserFloat("nearestJetPtRatio", 1.);      
-	        ele.addUserFloat("nearestJetPtRel", 0.);
-	    }
-    }
-    else
-	{
-	    ele.addUserFloat("nearestJetPtRatio", 1.);      
-	    ele.addUserFloat("nearestJetPtRel", 0.);
-	}
+      // cout << jets_.size() << endl;
+      if (useMINIAODjecs && jets_.size() > 0) {
+         if ((matchedJet.correctedJet(0).p4() - ele.p4()).Rho() >= 1e-4 && dR <= 0.5) {
+            auto lepAwareJetp4 = (matchedJetL1.p4() - ele.p4()) * L2L3_SF + ele.p4(); // "lep-aware" JEC
+            TLorentzVector eleTLV = TLorentzVector(ele.px(), ele.py(), ele.pz(), ele.p4().E());
+            TLorentzVector jetTLV = TLorentzVector(lepAwareJetp4.Px(), lepAwareJetp4.Py(), lepAwareJetp4.Pz(), lepAwareJetp4.E());
+            ele.addUserFloat("nearestJetPtRatio", std::min(ele.pt() / lepAwareJetp4.pt(), 1.5));
+            ele.addUserFloat("nearestJetPtRel", eleTLV.Perp((jetTLV - eleTLV).Vect()));
+         } else {
+            ele.addUserFloat("nearestJetPtRatio", 1.);
+            ele.addUserFloat("nearestJetPtRel", 0.);
+         }
+      } else {
+         ele.addUserFloat("nearestJetPtRatio", 1.);
+         ele.addUserFloat("nearestJetPtRel", 0.);
+      }
 
-      if (jets_.size()>0) ele.addUserFloat("nearestJetCsv",max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
-      else ele.addUserFloat("nearestJetCsv",0.);
-      ele.addUserFloat("sip3D",fabs(ele.dB(pat::Electron::PV3D)/ele.edB(pat::Electron::PV3D)));
-      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1) );
+      if (jets_.size() > 0)
+         ele.addUserFloat("nearestJetCsv", max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0)));
+      else
+         ele.addUserFloat("nearestJetCsv", 0.);
+      ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
+      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
 
       ele.addUserFloat("leptonMVA", mva(ele));
 
@@ -742,49 +693,43 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 
       eles->push_back(ele);
    }
-   
-   for (auto tau: *input_tau) {
-      if (tau.pt() < tau_minpt_) continue;
-      
-//       pat::Jet matchedJet;
-//       double dR = 666.;
-//       for (const auto& j: jets_) {
-// 	double newDR = helper_.DeltaR(&j, &tau);
-// 	if (newDR < dR) {
-// 	  dR = newDR;
-// 	  matchedJet = j;
-// 	}
-//       }
 
-      if (tau.leadChargedHadrCand().isAvailable())
-      {
-        auto track = tau.leadChargedHadrCand()->bestTrack();
+   for (auto tau : *input_tau) {
+      if (tau.pt() < tau_minpt_)
+         continue;
 
-        if (!track)
-        {
-            tau.addUserFloat("dxy",-666.);
-            tau.addUserFloat("dz",-666.);
-            tau.addUserFloat("idNonIsolated",-666.);
-            tau.addUserFloat("idPreselection",-666.);
-        }
-        else
-        {
-            tau.addUserFloat("dxy",track->dxy(vertex_.position()));
-            tau.addUserFloat("dz",track->dz(vertex_.position()));
+      //       pat::Jet matchedJet;
+      //       double dR = 666.;
+      //       for (const auto& j: jets_) {
+      // 	double newDR = helper_.DeltaR(&j, &tau);
+      // 	if (newDR < dR) {
+      // 	  dR = newDR;
+      // 	  matchedJet = j;
+      // 	}
+      //       }
+
+      if (tau.leadChargedHadrCand().isAvailable()) {
+         auto track = tau.leadChargedHadrCand()->bestTrack();
+
+         if (!track) {
+            tau.addUserFloat("dxy", -666.);
+            tau.addUserFloat("dz", -666.);
+            tau.addUserFloat("idNonIsolated", -666.);
+            tau.addUserFloat("idPreselection", -666.);
+         } else {
+            tau.addUserFloat("dxy", track->dxy(vertex_.position()));
+            tau.addUserFloat("dz", track->dz(vertex_.position()));
             tau.addUserFloat("idNonIsolated", passes(tau, nonIsolated));
             tau.addUserFloat("idPreselection", passes(tau, preselection));
-        }
+         }
       }
-      
-      else
-      {
-        tau.addUserFloat("dxy",-666.);
-        tau.addUserFloat("dz",-666.);
-        tau.addUserFloat("idPreselection",-666.);
+
+      else {
+         tau.addUserFloat("dxy", -666.);
+         tau.addUserFloat("dz", -666.);
+         tau.addUserFloat("idPreselection", -666.);
       }
-      
-      
-      
+
       taus->push_back(tau);
    }
    event.put(std::move(eles));
@@ -793,14 +738,15 @@ LeptonIdentifier::produce(edm::Event& event, const edm::EventSetup& setup)
 }
 
 // ------------ method called once each job just before starting event loop  ------------
-void 
+void
 LeptonIdentifier::beginJob()
 {
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
-void 
-LeptonIdentifier::endJob() {
+void
+LeptonIdentifier::endJob()
+{
 }
 
 // ------------ method called when starting to processes a run  ------------
@@ -810,7 +756,7 @@ LeptonIdentifier::beginRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 */
- 
+
 // ------------ method called when ending the processing of a run  ------------
 /*
 void
@@ -818,7 +764,7 @@ LeptonIdentifier::endRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 */
- 
+
 // ------------ method called when starting to processes a luminosity block  ------------
 /*
 void
@@ -826,7 +772,7 @@ LeptonIdentifier::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSe
 {
 }
 */
- 
+
 // ------------ method called when ending the processing of a luminosity block  ------------
 /*
 void
@@ -834,16 +780,17 @@ LeptonIdentifier::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetu
 {
 }
 */
- 
+
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
-LeptonIdentifier::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  //The following says we do not know what parameters are allowed so do no validation
-  // Please change this to state exactly what you do use, even if it is no parameters
-  edm::ParameterSetDescription desc;
-  desc.setUnknown();
-  descriptions.addDefault(desc);
+LeptonIdentifier::fillDescriptions(edm::ConfigurationDescriptions &descriptions)
+{
+   // The following says we do not know what parameters are allowed so do no validation
+   // Please change this to state exactly what you do use, even if it is no parameters
+   edm::ParameterSetDescription desc;
+   desc.setUnknown();
+   descriptions.addDefault(desc);
 }
 
-//define this as a plug-in
+// define this as a plug-in
 DEFINE_FWK_MODULE(LeptonIdentifier);
