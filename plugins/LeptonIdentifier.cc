@@ -44,7 +44,7 @@
 // class declaration
 //
 
-enum ID { nonIsolated, preselection, looseCut, looseMVA, tightCut, tightMVA };
+enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA };
 
 class LeptonIdentifier : public edm::EDProducer
 {
@@ -315,6 +315,31 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          // passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
          passesID = mu.isLooseMuon() && passesMuonBestTrackID;
          break;
+      case fakeable:
+         passesKinematics = mu.pt() > 10;
+         if (mva(mu) > 0.75)
+            passesID = mu.userFloat("nearestJetCsv") < 0.89;
+         else
+            passesID = mu.userFloat("nearestJetCsv") < 0.605 && mu.userFloat("nearestJetPtRatio") > 0.3;
+         passesIso = true;
+         break;
+      case cutbased:
+         passesKinematics = mu.pt() > 10;
+         passesIso = mu.userFloat("miniIso") < 0.2;
+         if (mu.muonBestTrack().isAvailable())  // muonBestTrack? innerTrack?
+            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
+         passesID = passesMuonBestTrackID && mu.userFloat("sip3D") < 4 && mu.isMediumMuon();
+         break;
+      case mvabased:
+         passesKinematics = mu.pt() > 10;
+         passesIso = true;
+         if (mu.innerTrack().isAvailable())  // muonBestTrack?
+            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
+         passesID = mva(mu) > 0.75 &&
+                    mu.userFloat("nearestJetCsv") < 0.89 &&
+                    passesMuonBestTrackID &&
+                    mu.isMediumMuon();
+         break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
          return false;
@@ -397,6 +422,100 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 
          passesIso = ele.userFloat("miniIso") < 0.4;
          passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D") < 8) && ele.passConversionVeto();
+         break;
+      case fakeable:
+         passesKinematics = ele.pt() > 10;
+         passesIso = true;
+         if (ele.pt() > 30) {
+            if (fabs(ele.eta()) < 0.8) {
+               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                            ele.hcalOverEcal() < 0.10 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+            }
+            else if (fabs(ele.eta()) < 1.479) {
+               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                            ele.hcalOverEcal() < 0.10 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+            }
+            else if (fabs(ele.eta()) < 2.5) {
+               passesCuts = ele.sigmaIetaIeta() < 0.030 &&
+                            ele.hcalOverEcal() < 0.07 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
+            }
+            else
+               passesKinematics = false;
+         }
+         else
+            passesCuts = true;
+         passGsfTrackID = ele.userFloat("numMissingHits") == 0;
+         if (mva(ele) > 0.75)
+            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < 0.89;
+         else
+            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < 0.605 && ele.userFloat("nearestJetPtRatio") > 0.3;
+         break;
+      case cutbased:
+         // Tight WP
+         if (scEta < 0.8)
+            passesMVA = eleMvaNonTrig > 0.87;
+         else if (scEta < 1.479)
+            passesMVA = eleMvaNonTrig > 0.60;
+         else
+            passesMVA = eleMvaNonTrig > 0.17;
+         passesKinematics = ele.pt() > 15;
+         passesIso = ele.userFloat("miniIso") < 0.1;
+         passGsfTrackID = ele.userFloat("numMissingHits") == 0 &&
+                          ele.isGsfCtfScPixChargeConsistent()
+                          && ele.userFloat("sip3D") < 4;
+         passesID = passGsfTrackID && passesMVA && ele.passConversionVeto();
+         break;
+      case mvabased:
+         passesKinematics = ele.pt() > 15;
+         passesIso = true;
+         if (ele.pt() > 30) {
+            if (fabs(ele.eta()) < 0.8) {
+               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                            ele.hcalOverEcal() < 0.10 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+            }
+            else if (fabs(ele.eta()) < 1.479) {
+               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                            ele.hcalOverEcal() < 0.10 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+            }
+            else if (fabs(ele.eta()) < 2.5) {
+               passesCuts = ele.sigmaIetaIeta() < 0.030 &&
+                            ele.hcalOverEcal() < 0.07 &&
+                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
+                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
+            }
+            else
+               passesKinematics = false;
+         }
+         else
+            passesCuts = true;
+         passGsfTrackID = ele.userFloat("numMissingHits") == 0 && ele.isGsfCtfScPixChargeConsistent();
+         passesID = passesCuts &&
+                    passGsfTrackID &&
+                    ele.passConversionVeto() &&
+                    mva(ele) > 0.75 &&
+                    ele.userFloat("nearestJetCsv") < 0.89;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
@@ -605,10 +724,16 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
          mu.addUserFloat("leptonMVA", mva(mu));
          mu.addUserFloat("idLooseMVA", passes(mu, looseMVA));
          mu.addUserFloat("idTightMVA", passes(mu, tightMVA));
+         mu.addUserFloat("idFakeable", passes(mu, fakeable));
+         mu.addUserFloat("idCutBased", passes(mu, cutbased));
+         mu.addUserFloat("idMVABased", passes(mu, mvabased));
       } else {
          mu.addUserFloat("leptonMVA", -666.);
          mu.addUserFloat("idLooseMVA", -666.);
          mu.addUserFloat("idTightMVA", -666.);
+         mu.addUserFloat("idFakeable", -666.);
+         mu.addUserFloat("idCutBased", -666.);
+         mu.addUserFloat("idMVABased", -666.);
       }
       mus->push_back(mu);
    }
@@ -691,6 +816,16 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
 
+      if (ele.userFloat("idPreselection") > .5) {
+         ele.addUserFloat("idFakeable", passes(ele, fakeable));
+         ele.addUserFloat("idCutBased", passes(ele, cutbased));
+         ele.addUserFloat("idMVABased", passes(ele, mvabased));
+      } else {
+         ele.addUserFloat("idFakeable", -666.);
+         ele.addUserFloat("idCutBased", -666.);
+         ele.addUserFloat("idMVABased", -666.);
+      }
+      
       eles->push_back(ele);
    }
 
