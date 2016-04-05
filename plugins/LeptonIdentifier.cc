@@ -806,27 +806,20 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       // 	  matchedJet = j;
       // 	}
       //       }
+      tau.addUserFloat("dxy", -666.);
+      tau.addUserFloat("dz", -666.);
+      tau.addUserFloat("idNonIsolated", -666.);
+      tau.addUserFloat("idPreselection", -666.);
 
       if (tau.leadChargedHadrCand().isAvailable()) {
          auto track = tau.leadChargedHadrCand()->bestTrack();
 
-         if (!track) {
-            tau.addUserFloat("dxy", -666.);
-            tau.addUserFloat("dz", -666.);
-            tau.addUserFloat("idNonIsolated", -666.);
-            tau.addUserFloat("idPreselection", -666.);
-         } else {
+         if (track) {
             tau.addUserFloat("dxy", track->dxy(vertex_.position()));
             tau.addUserFloat("dz", track->dz(vertex_.position()));
             tau.addUserFloat("idNonIsolated", passes(tau, nonIsolated));
             tau.addUserFloat("idPreselection", passes(tau, preselection));
          }
-      }
-
-      else {
-         tau.addUserFloat("dxy", -666.);
-         tau.addUserFloat("dz", -666.);
-         tau.addUserFloat("idPreselection", -666.);
       }
 
       taus->push_back(tau);
