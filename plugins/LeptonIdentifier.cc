@@ -602,7 +602,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
                   qualityTrack(*(p->bestTrack()), vertex_)
             );
       });
-      lepton.addUserFloat("neadestJetNDauCharged", n_charged_tracks);
+      lepton.addUserFloat("nearestJetNDauCharged", n_charged_tracks);
 
       if (useMINIAODjecs and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 && dR <= 0.5) {
          auto lepAwareJetp4 = (matchedJetL1.p4() - lepton.p4()) * L2L3_SF + lepton.p4(); // "lep-aware" JEC
