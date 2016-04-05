@@ -224,8 +224,8 @@ LeptonIdentifier::mva(const pat::Muon &mu)
    varchRelIso = mu.userFloat("miniAbsIsoCharged");
    varneuRelIso = mu.userFloat("miniAbsIsoNeutral");
    varjetDR_in = mu.userFloat("nearestJetPtRatio");
-   varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
-   varjetBTagCSV_in = mu.userFloat("nearestJetCsv");
+   varjetPtRatio_in = std::min(mu.userFloat("nearestJetPtRatio"), 1.5f);
+   varjetBTagCSV_in = std::max(mu.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = mu.userFloat("nearestJetNDauCharged");
    varsip3d = mu.userFloat("sip3D");
    vardxy = log(fabs(mu.userFloat("dxy")));
@@ -243,8 +243,8 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varchRelIso = ele.userFloat("miniAbsIsoCharged");
    varneuRelIso = ele.userFloat("miniAbsIsoNeutral");
    varjetDR_in = ele.userFloat("nearestJetPtRatio");
-   varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
-   varjetBTagCSV_in = ele.userFloat("nearestJetCsv");
+   varjetPtRatio_in = std::min(ele.userFloat("nearestJetPtRatio"), 1.5f);
+   varjetBTagCSV_in = std::max(ele.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = ele.userFloat("nearestJetNDauCharged");
    varsip3d = ele.userFloat("sip3D");
    vardxy = log(fabs(ele.userFloat("dxy")));
