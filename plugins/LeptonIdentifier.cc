@@ -390,7 +390,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case preselection:
 
-         // very loose WP
+         // VLooseIdEmu WP
          if (scEta < 0.8)
             passesMVA = (eleMvaNonTrig > -0.7);
          else if (scEta < 1.479)
@@ -404,7 +404,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
 
          passesIso = ele.userFloat("miniIso") < 0.4;
-         passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D") < 8) && ele.passConversionVeto();
+         passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D") < 8);
          break;
       case fakeable:
          passesKinematics = ele.pt() > 10;
