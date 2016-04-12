@@ -810,6 +810,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       // 	}
       //       }
 
+      bool  track_avbl = false;
       float dxy = -666.;
       float dz = -666.;
       float id_non_isolated = -666.;
@@ -819,15 +820,20 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
          auto track = tau.leadChargedHadrCand()->bestTrack();
 
          if (track) {
+            track_avbl = true;
             dxy = track->dxy(vertex_.position());
             dz = track->dz(vertex_.position());
-            id_non_isolated = passes(tau, nonIsolated);
-            id_preselection = passes(tau, preselection);
          }
       }
 
       tau.addUserFloat("dxy", dxy);
       tau.addUserFloat("dz", dz);
+
+      if (track_avbl) {
+         id_non_isolated = passes(tau, nonIsolated);
+         id_preselection = passes(tau, preselection);
+      }
+
       tau.addUserFloat("idNonIsolated", id_non_isolated);
       tau.addUserFloat("idPreselection", id_preselection);
 
