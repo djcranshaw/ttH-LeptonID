@@ -616,7 +616,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
    lepton.addUserFloat("nearestJetPtRel", njet_pt_rel);
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
-   lepton.addUserFloat("leptonMVA", mva(lepton));
 
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
    lepton.addUserFloat("idLooseCut", passes(lepton, looseCut));
