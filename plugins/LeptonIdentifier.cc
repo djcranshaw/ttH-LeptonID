@@ -574,8 +574,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetDr", min(dR, 0.5)); // no longer used in MVA
 
    float njet_csv = 0;
-   float njet_pt_ratio = 1.;
-   float njet_pt_rel = 0.;
+   float njet_pt_ratio = -1.;
+   float njet_pt_rel = -1.;
    float njet_ndau_charged = 0.;
 
    // cout << jets_.size() << endl;
@@ -616,20 +616,20 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
    lepton.addUserFloat("nearestJetPtRel", njet_pt_rel);
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
+   auto mva_value = mva(lepton);
+   lepton.addUserFloat("leptonMVA", mva_value);
 
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
    lepton.addUserFloat("idLooseCut", passes(lepton, looseCut));
    lepton.addUserFloat("idTightCut", passes(lepton, tightCut));
 
    if (lepton.userFloat("idPreselection") > .5) {
-      lepton.addUserFloat("leptonMVA", mva(lepton));
       lepton.addUserFloat("idLooseMVA", passes(lepton, looseMVA));
       lepton.addUserFloat("idTightMVA", passes(lepton, tightMVA));
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
       lepton.addUserFloat("idCutBased", passes(lepton, cutbased));
       lepton.addUserFloat("idMVABased", passes(lepton, mvabased));
    } else {
-      lepton.addUserFloat("leptonMVA", -666.);
       lepton.addUserFloat("idLooseMVA", -666.);
       lepton.addUserFloat("idTightMVA", -666.);
       lepton.addUserFloat("idFakeable", -666.);
