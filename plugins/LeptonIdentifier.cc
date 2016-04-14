@@ -770,7 +770,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("superClusterEta", abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
       ele.addUserFloat("miniIso",
-                       helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, miniIso_calculation_params));
+                       helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, &miniIso_calculation_params));
       ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
       ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
       ele.addUserFloat("rho", miniIso_calculation_params["rho"]);
