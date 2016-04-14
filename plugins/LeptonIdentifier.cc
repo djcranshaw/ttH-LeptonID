@@ -250,23 +250,19 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
    bool passesID = false;
 
    bool passesMuonBestTrackID = false;
-   bool mediumID = false;
-   bool goodGlb = false;
+   bool mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
+   bool goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
    bool passesCuts = false;
 
    switch (id) {
       case looseMVA:
          passesKinematics = true;
          passesIso = true;
-         goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
-         mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
          passesID = (mu.userFloat("leptonMVA") > 0.5 && mediumID);
          break;
       case tightMVA:
          passesKinematics = true;
          passesIso = true;
-         goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
-         mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
          passesID = (mu.userFloat("leptonMVA") > 0.75 && mediumID); /////// <<--- the MVA cut !!!
          break;
       case looseCut:
