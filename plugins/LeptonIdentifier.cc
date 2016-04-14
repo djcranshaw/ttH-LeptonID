@@ -250,8 +250,8 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
    bool passesID = false;
 
    bool passesMuonBestTrackID = false;
-   bool mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
    bool goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
+   bool mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
    bool passesCuts = false;
 
    switch (id) {
