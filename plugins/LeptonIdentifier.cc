@@ -192,6 +192,7 @@ LeptonIdentifier::~LeptonIdentifier()
 bool
 LeptonIdentifier::qualityTrack(const reco::Track& t, const reco::Vertex& v) const
 {
+   //see SignedImpactParameter.cc in cmg-tools
    return
       (t.pt()>1 &&
        t.hitPattern().numberOfValidHits() >= 8 &&
@@ -578,18 +579,24 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    if (jets_.size() > 0) {
       njet_csv = max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
 
+      // match reco candidates to packed candidates to access fromPV(), pseudoTrack() functions      
       auto constituents = matchedJet.daughterPtrVector();
-      njet_ndau_charged = std::count_if(constituents.begin(), constituents.end(), [&](const reco::CandidatePtr& p) -> bool {
-            return (
-                  helper_.DeltaR(&lepton, &(p->p4())) <= 0.4
-                  and
-                  p->charge() != 0
-                  and
-                  p->bestTrack()
-                  and
-                  qualityTrack(*(p->bestTrack()), vertex_)
-            );
-      });
+      std::vector<pat::PackedCandidate> packed_constituents = helper_.GetPackedCandidates();
+      for (const auto & jet_cand : constituents)
+         {
+            for (const auto & packed_jet_cand : packed_constituents)
+               {
+                  if (jet_cand->pt() == packed_jet_cand.pt()) //matching on pt ONLY, should hopefully be enough
+                     {
+                        if ( helper_.DeltaR(&lepton, &(packed_jet_cand.p4())) <= 0.4 
+                             && packed_jet_cand.charge() != 0
+                             && packed_jet_cand.fromPV() > 1
+                             && qualityTrack(packed_jet_cand.pseudoTrack(), vertex_)) njet_ndau_charged +=1;
+                        break;
+                     }
+               }
+         }
+      
 
       if (useMINIAODjecs and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 && dR <= 0.5) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
