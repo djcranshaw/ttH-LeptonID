@@ -44,7 +44,7 @@
 // class declaration
 //
 
-enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA };
+enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA, selection };
 
 class LeptonIdentifier : public edm::EDProducer
 {
@@ -323,6 +323,8 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
          return false;
+      default:
+         break;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -500,6 +502,8 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
          return false;
+      default:
+         break;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -525,9 +529,17 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
          break;
       case preselection:
          passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
-         passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5);
+         passesIso = (tau.tauID("byLooseIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
          passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
+         break;
+      case selection:
+         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+         passesIso = (tau.tauID("byMediumIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
+         passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          break;
       case looseCut:
       case looseMVA:
@@ -817,6 +829,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       float dz = -666.;
       float id_non_isolated = -666.;
       float id_preselection = -666.;
+      float id_selection = -666.;
 
       if (tau.leadChargedHadrCand().isAvailable()) {
          auto track = tau.leadChargedHadrCand()->bestTrack();
@@ -834,10 +847,12 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       if (track_avbl) {
          id_non_isolated = passes(tau, nonIsolated);
          id_preselection = passes(tau, preselection);
+         id_selection = passes(tau, selection);
       }
 
       tau.addUserFloat("idNonIsolated", id_non_isolated);
       tau.addUserFloat("idPreselection", id_preselection);
+      tau.addUserFloat("idSelection", id_selection);
 
       taus->push_back(tau);
    }
