@@ -66,7 +66,6 @@ private:
    float mva(const pat::Muon &mu);
    float mva(const pat::Electron &ele);
 
-   bool qualityTrack(const reco::Track& t, const reco::Vertex& v) const;
    template<typename T> void addCommonUserFloats(T& lepton, bool useMINIAODjecs);
 
    // ----------member data ---------------------------
@@ -188,19 +187,6 @@ LeptonIdentifier::~LeptonIdentifier()
 //
 // member functions
 //
-
-bool
-LeptonIdentifier::qualityTrack(const reco::Track& t, const reco::Vertex& v) const
-{
-   //see SignedImpactParameter.cc in cmg-tools
-   return
-      (t.pt()>1 &&
-       t.hitPattern().numberOfValidHits() >= 8 &&
-       t.hitPattern().numberOfValidPixelHits() >= 2 &&
-       t.normalizedChi2() < 5 &&
-       std::fabs(t.dxy(v.position())) < 0.2 &&
-       std::fabs(t.dz(v.position())) < 17);
-}
 
 float
 LeptonIdentifier::mva(const pat::Muon &mu)
@@ -591,24 +577,28 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    if (jets_.size() > 0) {
       njet_csv = max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
 
-      // match reco candidates to packed candidates to access fromPV(), pseudoTrack() functions      
-      auto constituents = matchedJet.daughterPtrVector();
-      std::vector<pat::PackedCandidate> packed_constituents = helper_.GetPackedCandidates();
-      for (const auto & jet_cand : constituents)
-         {
-            for (const auto & packed_jet_cand : packed_constituents)
-               {
-                  if (jet_cand->pt() == packed_jet_cand.pt()) //matching on pt ONLY, should hopefully be enough
-                     {
-                        if ( helper_.DeltaR(&lepton, &(packed_jet_cand.p4())) <= 0.4 
-                             && packed_jet_cand.charge() != 0
-                             && packed_jet_cand.fromPV() > 1
-                             && qualityTrack(packed_jet_cand.pseudoTrack(), vertex_)) njet_ndau_charged +=1;
-                        break;
-                     }
-               }
-         }
-      
+
+      for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
+
+         const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
+         float dR = helper_.DeltaR(&matchedJet, &(dau_jet.p4()));
+         
+         bool isgoodtrk = false;
+         const reco::Track trk = dau_jet.pseudoTrack();
+         const math::XYZPoint vtx_position = lepton.vertex();
+         
+         if(trk.pt()>1 &&
+            trk.hitPattern().numberOfValidHits()>=8 &&
+            trk.hitPattern().numberOfValidPixelHits()>=2 &&
+            trk.normalizedChi2()<5 &&
+            std::fabs(trk.dxy(vtx_position))<0.2 &&
+            std::fabs(trk.dz(vtx_position))<17
+            ) isgoodtrk = true;
+    
+         if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+         
+      }
+
 
       if (useMINIAODjecs and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 && dR <= 0.5) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
