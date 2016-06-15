@@ -500,30 +500,24 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
 {
    double minTauPt = 5.; // iMinPt;
 
-   bool passesKinematics = false;
    bool passesIso = false;
    bool passesID = false;
 
-   bool passesPVassoc = false;
+   bool passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+   bool passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
 
    switch (id) {
       case nonIsolated:
-         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
          passesIso = true;
-         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          break;
       case preselection:
-         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
          passesIso = (tau.tauID("byLooseIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
-         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          break;
       case selection:
-         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
          passesIso = (tau.tauID("byMediumIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
-         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          break;
