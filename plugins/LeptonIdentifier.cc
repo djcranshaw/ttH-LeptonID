@@ -557,7 +557,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
          matchedJetRaw = j;
 
          if (useMINIAODjecs) {
-            matchedJetL1.setP4(j.correctedJet(1).p4());
+            matchedJetL1.setP4(j.correctedJet("L1FastJet","none","patJetCorrFactorsReapplyJEC").p4());
             matchedJetRaw.setP4(j.correctedJet(0).p4());
 
             corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
@@ -573,10 +573,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    float njet_pt_rel = -1.;
    float njet_ndau_charged = 0.;
 
-   // cout << jets_.size() << endl;
    if (jets_.size() > 0) {
       njet_csv = max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
-
 
       for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
 
@@ -610,10 +608,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
          TLorentzVector l4 = TLorentzVector(lepton.p4().Px(), lepton.p4().Py(), lepton.p4().Pz(), lepton.p4().E());
          TLorentzVector j4 = TLorentzVector(lepAwareJetp4.Px(), lepAwareJetp4.Py(), lepAwareJetp4.Pz(), lepAwareJetp4.E());
 
-         if ((j4 - l4).Rho() < 1e-4)
-            njet_pt_rel = 0.;
-         else
-            njet_pt_rel = l4.Perp((j4 - l4).Vect());
+         if ((j4 - l4).Rho() < 1e-4) njet_pt_rel = 0.;
+         else njet_pt_rel = l4.Perp((j4 - l4).Vect());
       }
    }
 
@@ -623,7 +619,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
-
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
    lepton.addUserFloat("idLooseCut", passes(lepton, looseCut));
    lepton.addUserFloat("idTightCut", passes(lepton, tightCut));
