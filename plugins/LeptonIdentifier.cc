@@ -44,7 +44,7 @@
 // class declaration
 //
 
-enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA };
+enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA, selection };
 
 class LeptonIdentifier : public edm::one::EDProducer<>
 {
@@ -66,7 +66,6 @@ private:
    float mva(const pat::Muon &mu);
    float mva(const pat::Electron &ele);
 
-   bool qualityTrack(const reco::Track& t, const reco::Vertex& v) const;
    template<typename T> void addCommonUserFloats(T& lepton, bool useMINIAODjecs);
 
    // ----------member data ---------------------------
@@ -189,18 +188,6 @@ LeptonIdentifier::~LeptonIdentifier()
 // member functions
 //
 
-bool
-LeptonIdentifier::qualityTrack(const reco::Track& t, const reco::Vertex& v) const
-{
-   return
-      (t.pt()>1 &&
-       t.hitPattern().numberOfValidHits() >= 8 &&
-       t.hitPattern().numberOfValidPixelHits() >= 2 &&
-       t.normalizedChi2() < 5 &&
-       std::fabs(t.dxy(v.position())) < 0.2 &&
-       std::fabs(t.dz(v.position())) < 17);
-}
-
 float
 LeptonIdentifier::mva(const pat::Muon &mu)
 {
@@ -322,6 +309,8 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
          return false;
+      default:
+         break;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -499,6 +488,8 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
          return false;
+      default:
+         break;
    }
 
    return (passesKinematics && passesIso && passesID);
@@ -509,24 +500,26 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
 {
    double minTauPt = 5.; // iMinPt;
 
-   bool passesKinematics = false;
    bool passesIso = false;
    bool passesID = false;
 
-   bool passesPVassoc = false;
+   bool passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
+   bool passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
 
    switch (id) {
       case nonIsolated:
-         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
          passesIso = true;
-         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          break;
       case preselection:
-         passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
-         passesIso = (tau.tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5);
-         passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
+         passesIso = (tau.tauID("byLooseIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
+         break;
+      case selection:
+         passesIso = (tau.tauID("byMediumIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
+         //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          break;
       case looseCut:
       case looseMVA:
@@ -558,7 +551,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
          matchedJetRaw = j;
 
          if (useMINIAODjecs) {
-            matchedJetL1.setP4(j.correctedJet(1).p4());
+            matchedJetL1.setP4(j.correctedJet("L1FastJet","none","patJetCorrFactorsReapplyJEC").p4());
             matchedJetRaw.setP4(j.correctedJet(0).p4());
 
             corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
@@ -574,22 +567,30 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    float njet_pt_rel = -1.;
    float njet_ndau_charged = 0.;
 
-   // cout << jets_.size() << endl;
    if (jets_.size() > 0) {
       njet_csv = max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
 
-      auto constituents = matchedJet.daughterPtrVector();
-      njet_ndau_charged = std::count_if(constituents.begin(), constituents.end(), [&](const reco::CandidatePtr& p) -> bool {
-            return (
-                  helper_.DeltaR(&lepton, &(p->p4())) <= 0.4
-                  and
-                  p->charge() != 0
-                  and
-                  p->bestTrack()
-                  and
-                  qualityTrack(*(p->bestTrack()), vertex_)
-            );
-      });
+      for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
+
+         const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
+         float dR = helper_.DeltaR(&matchedJet, &(dau_jet.p4()));
+         
+         bool isgoodtrk = false;
+         const reco::Track trk = dau_jet.pseudoTrack();
+         const math::XYZPoint vtx_position = lepton.vertex();
+         
+         if(trk.pt()>1 &&
+            trk.hitPattern().numberOfValidHits()>=8 &&
+            trk.hitPattern().numberOfValidPixelHits()>=2 &&
+            trk.normalizedChi2()<5 &&
+            std::fabs(trk.dxy(vtx_position))<0.2 &&
+            std::fabs(trk.dz(vtx_position))<17
+            ) isgoodtrk = true;
+    
+         if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+         
+      }
+
 
       if (useMINIAODjecs and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 && dR <= 0.5) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
@@ -601,10 +602,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
          TLorentzVector l4 = TLorentzVector(lepton.p4().Px(), lepton.p4().Py(), lepton.p4().Pz(), lepton.p4().E());
          TLorentzVector j4 = TLorentzVector(lepAwareJetp4.Px(), lepAwareJetp4.Py(), lepAwareJetp4.Pz(), lepAwareJetp4.E());
 
-         if ((j4 - l4).Rho() < 1e-4)
-            njet_pt_rel = 0.;
-         else
-            njet_pt_rel = l4.Perp((j4 - l4).Vect());
+         if ((j4 - l4).Rho() < 1e-4) njet_pt_rel = 0.;
+         else njet_pt_rel = l4.Perp((j4 - l4).Vect());
       }
    }
 
@@ -614,7 +613,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
-
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
    lepton.addUserFloat("idLooseCut", passes(lepton, looseCut));
    lepton.addUserFloat("idTightCut", passes(lepton, tightCut));
@@ -810,6 +808,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       float dz = -666.;
       float id_non_isolated = -666.;
       float id_preselection = -666.;
+      float id_selection = -666.;
 
       if (tau.leadChargedHadrCand().isAvailable()) {
          auto track = tau.leadChargedHadrCand()->bestTrack();
@@ -827,10 +826,12 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       if (track_avbl) {
          id_non_isolated = passes(tau, nonIsolated);
          id_preselection = passes(tau, preselection);
+         id_selection = passes(tau, selection);
       }
 
       tau.addUserFloat("idNonIsolated", id_non_isolated);
       tau.addUserFloat("idPreselection", id_preselection);
+      tau.addUserFloat("idSelection", id_selection);
 
       taus->push_back(tau);
    }
