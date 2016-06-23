@@ -618,8 +618,10 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("idTightCut", passes(lepton, tightCut));
 
    if (lepton.userFloat("idPreselection") > .5) {
-      lepton.addUserFloat("idLooseMVA", passes(lepton, looseMVA));
-      lepton.addUserFloat("idTightMVA", passes(lepton, tightMVA));
+      //      lepton.addUserFloat("idLooseMVA", passes(lepton, looseMVA));
+      lepton.addUserFloat("idLooseMVA", passes(lepton, fakeable));
+      //      lepton.addUserFloat("idTightMVA", passes(lepton, tightMVA));
+      lepton.addUserFloat("idTightMVA", passes(lepton, mvabased));
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
       lepton.addUserFloat("idCutBased", passes(lepton, cutbased));
       lepton.addUserFloat("idMVABased", passes(lepton, mvabased));
