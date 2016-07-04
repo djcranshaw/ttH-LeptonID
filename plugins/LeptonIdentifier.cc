@@ -106,6 +106,10 @@ private:
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
+   double loose_csv_wp = .46;
+   double tight_csv_wp = .80;
+   // double loose_csv_wp = .605;
+   // double tight_csv_wp = .89;
 };
 
 //
@@ -194,7 +198,7 @@ LeptonIdentifier::mva(const pat::Muon &mu)
    varpt = mu.pt();
    vareta = mu.eta();
    varchRelIso = mu.userFloat("miniAbsIsoCharged") / mu.pt();
-   varneuRelIso = mu.userFloat("miniAbsIsoNeutral") / mu.pt();
+   varneuRelIso = mu.userFloat("miniAbsIsoNeutralcorr") / mu.pt();
    varjetPtRel_in = mu.userFloat("nearestJetPtRel");
    varjetPtRatio_in = std::min(mu.userFloat("nearestJetPtRatio"), 1.5f);
    varjetBTagCSV_in = std::max(mu.userFloat("nearestJetCsv"), 0.f);
@@ -213,7 +217,7 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varpt = ele.pt();
    vareta = ele.eta();
    varchRelIso = ele.userFloat("miniAbsIsoCharged") / ele.pt();
-   varneuRelIso = ele.userFloat("miniAbsIsoNeutral") / ele.pt();
+   varneuRelIso = ele.userFloat("miniAbsIsoNeutralcorr") / ele.pt();
    varjetPtRel_in = ele.userFloat("nearestJetPtRel");
    varjetPtRatio_in = std::min(ele.userFloat("nearestJetPtRatio"), 1.5f);
    varjetBTagCSV_in = std::max(ele.userFloat("nearestJetCsv"), 0.f);
@@ -284,9 +288,9 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
       case fakeable:
          passesKinematics = mu.pt() > 10;
          if (mu.userFloat("leptonMVA") > 0.75)
-            passesID = mu.userFloat("nearestJetCsv") < 0.89;
+            passesID = mu.userFloat("nearestJetCsv") < tight_csv_wp;
          else
-            passesID = mu.userFloat("nearestJetCsv") < 0.605 && mu.userFloat("nearestJetPtRatio") > 0.3;
+            passesID = mu.userFloat("nearestJetCsv") < loose_csv_wp && mu.userFloat("nearestJetPtRatio") > 0.3;
          passesIso = true;
          break;
       case cutbased:
@@ -299,10 +303,11 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
       case mvabased:
          passesKinematics = mu.pt() > 10;
          passesIso = true;
-         if (mu.innerTrack().isAvailable())  // muonBestTrack?
-            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
+         //         if (mu.innerTrack().isAvailable())  // muonBestTrack?
+         //            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
+         passesMuonBestTrackID = 1;
          passesID = mu.userFloat("leptonMVA") > 0.75 &&
-                    mu.userFloat("nearestJetCsv") < 0.89 &&
+                    mu.userFloat("nearestJetCsv") < tight_csv_wp &&
                     passesMuonBestTrackID &&
                     mu.isMediumMuon();
          break;
@@ -424,11 +429,12 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          }
          else
             passesCuts = true;
-         passGsfTrackID = ele.userFloat("numMissingHits") == 0;
+         //         passGsfTrackID = ele.userFloat("numMissingHits") == 0;
+         passGsfTrackID = 1;
          if (ele.userFloat("leptonMVA") > 0.75)
-            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < 0.89;
+            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < tight_csv_wp;
          else
-            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < 0.605 && ele.userFloat("nearestJetPtRatio") > 0.3;
+            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
          break;
       case cutbased:
          // Tight WP
@@ -446,8 +452,9 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          passesID = passGsfTrackID && passesMVA && ele.passConversionVeto();
          break;
       case mvabased:
-         passesKinematics = ele.pt() > 15;
+         passesKinematics = ele.pt() > 15.;
          passesIso = true;
+         //         double cone_pt = 0.85 * ele.pt() / ele.userFloat("nearestJetPtRatio"); 
          if (ele.pt() > 30) {
             if (fabs(ele.eta()) < 0.8) {
                passesCuts = ele.sigmaIetaIeta() < 0.011 &&
@@ -477,13 +484,16 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                passesKinematics = false;
          }
          else
-            passesCuts = true;
-         passGsfTrackID = ele.userFloat("numMissingHits") == 0 && ele.isGsfCtfScPixChargeConsistent();
+            {
+               passesCuts = true;
+            }
+         //passGsfTrackID = ele.userFloat("numMissingHits") == 0 && ele.isGsfCtfScPixChargeConsistent();
+         passGsfTrackID = 1;
          passesID = passesCuts &&
                     passGsfTrackID &&
-                    ele.passConversionVeto() &&
+            //         ele.passConversionVeto() &&
                     ele.userFloat("leptonMVA") > 0.75 &&
-                    ele.userFloat("nearestJetCsv") < 0.89;
+                    ele.userFloat("nearestJetCsv") < tight_csv_wp;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
