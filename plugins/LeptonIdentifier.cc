@@ -684,12 +684,21 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    helper_.SetPackedCandidates(*packedCands);
 
    // determine primary vertex
+   bool valid = false;
    for (const auto &v : *input_vtx) {
       if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
          helper_.SetVertex(v);
          vertex_ = v;
+         valid = true;
          break;
       }
+   }
+
+   if (not valid) {
+      event.put(std::move(eles));
+      event.put(std::move(mus));
+      event.put(std::move(taus));
+      return;
    }
 
    auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaTrigValues, mvaTrigCategories);
