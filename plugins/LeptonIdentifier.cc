@@ -66,7 +66,7 @@ private:
    float mva(const pat::Muon &mu);
    float mva(const pat::Electron &ele);
 
-   template<typename T> void addCommonUserFloats(T& lepton, bool useMINIAODjecs);
+   template<typename T> void addCommonUserFloats(T& lepton);
 
    // ----------member data ---------------------------
    MiniAODHelper helper_;
@@ -543,7 +543,7 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
 }
 
 template<typename T> void
-LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
+LeptonIdentifier::addCommonUserFloats(T& lepton)
 {
    double corr_factor = 1.;
    double L1_SF = 1.;
@@ -560,12 +560,9 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
          matchedJetL1 = j;
          matchedJetRaw = j;
 
-         if (useMINIAODjecs) {
-            matchedJetL1.setP4(j.correctedJet("L1FastJet","none","patJetCorrFactorsReapplyJEC").p4());
-            matchedJetRaw.setP4(j.correctedJet(0).p4());
-
-            corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
-         }
+         matchedJetL1.setP4(j.correctedJet("L1FastJet","none","").p4());
+         matchedJetRaw.setP4(j.correctedJet(0).p4());
+         corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
          L1_SF = matchedJetL1.p4().E() / matchedJetRaw.p4().E();
       }
    }
@@ -573,8 +570,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
    lepton.addUserFloat("nearestJetDr", min(dR, 0.5)); // no longer used in MVA
 
    float njet_csv = 0;
-   float njet_pt_ratio = -1.;
-   float njet_pt_rel = -1.;
+   float njet_pt_ratio = 1.;
+   float njet_pt_rel = 0.;
    float njet_ndau_charged = 0.;
 
    if (jets_.size() > 0) {
@@ -602,7 +599,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton, bool useMINIAODjecs)
       }
 
 
-      if (useMINIAODjecs and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 && dR <= 0.5) {
+      if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 and dR <= 0.5) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
          if ((matchedJet.p4() * (1. / corr_factor) - lepton.p4()).Rho() < 1e-4)
             lepAwareJetp4 = lepton.p4();
@@ -713,9 +710,6 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    // auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
    // jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
 
-   bool useMINIAODjecs = true;
-   // if(!input_jet.jecSetsAvailable()) useMINIAODjecs = false;
-
    jets_ = helper_.GetSelectedJets(*input_jet, 5., 2.4, jetID::none, '-'); // already corrected (?)
 
    for (auto mu : *input_mu) {
@@ -769,7 +763,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       mu.addUserFloat("idLooseLJ", helper_.isGoodMuon(mu, 15., 2.4, muonID::muonTightDL, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
       mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 25., 2.1, muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
 
-      addCommonUserFloats(mu, useMINIAODjecs);
+      addCommonUserFloats(mu);
 
       mus->push_back(mu);
    }
@@ -805,7 +799,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
 
-      addCommonUserFloats(ele, useMINIAODjecs);
+      addCommonUserFloats(ele);
 
       eles->push_back(ele);
    }
