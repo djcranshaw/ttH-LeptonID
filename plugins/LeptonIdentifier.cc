@@ -235,6 +235,7 @@ bool
 LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
    double minMuonPt = 5.0; // iMinPt;
+   double maxMuonEta = 2.5; 
 
    bool passesKinematics = false;
    bool passesIso = false;
@@ -257,7 +258,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          passesID = (mu.userFloat("leptonMVA") > 0.75 && mediumID); /////// <<--- the MVA cut !!!
          break;
       case looseCut:
-         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
+         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
          passesIso = (mu.userFloat("relIso") < 0.5);
          if (mu.innerTrack().isAvailable()) {
             passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
@@ -265,7 +266,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          passesID = (passesMuonBestTrackID && (mu.isGlobalMuon() || mu.isTrackerMuon()) && mu.isPFMuon());
          break;
       case tightCut:
-         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < 2.4));
+         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
          passesIso = (mu.userFloat("relIso") < 0.1);
 
          if (mu.innerTrack().isAvailable() && mu.globalTrack().isAvailable()) {
@@ -277,7 +278,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          passesID = (passesMuonBestTrackID && passesCuts);
          break;
       case preselection:
-         passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < 2.4));
+         passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
          passesIso = (mu.userFloat("miniIso") < 0.4);
          if (mu.innerTrack().isAvailable()) { // innerTrack() // muonBestTrack // isAvailable
             passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1 && (mu.userFloat("sip3D") < 8));
