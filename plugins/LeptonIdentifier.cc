@@ -107,9 +107,9 @@ private:
    double ele_minpt_;
    double tau_minpt_;
    double loose_csv_wp = .46;
-   double tight_csv_wp = .80;
+   double medium_csv_wp = .80;
    // double loose_csv_wp = .605;
-   // double tight_csv_wp = .89;
+   // double medium_csv_wp = .89;
 };
 
 //
@@ -269,7 +269,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          break;
       case fakeable:
          if (mu.userFloat("leptonMVA") > 0.75)
-            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < tight_csv_wp;
+            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < medium_csv_wp;
          else
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < loose_csv_wp and mu.userFloat("nearestJetPtRatio") > 0.3;
          passesIso = true;
@@ -278,7 +278,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          passesIso = true;
          passesID = passesPreselection and
             mu.userFloat("leptonMVA") > 0.75 and
-            mu.userFloat("nearestJetCsv") < tight_csv_wp and
+            mu.userFloat("nearestJetCsv") < medium_csv_wp and
             isMediumMuon(mu);
          break;
       case nonIsolated:
@@ -354,7 +354,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case fakeable:
          if (ele.userFloat("leptonMVA") > 0.75)
-            passesJetCSV = ele.userFloat("nearestJetCsv") < tight_csv_wp;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
          else
             passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
          passesID = passesPreselection and passesCuts and passesJetCSV;
@@ -363,7 +363,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          passesID = passesPreselection and
                     passesCuts and
                     ele.userFloat("leptonMVA") > 0.75 and
-                    ele.userFloat("nearestJetCsv") < tight_csv_wp;
+                    ele.userFloat("nearestJetCsv") < medium_csv_wp;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
