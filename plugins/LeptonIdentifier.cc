@@ -294,126 +294,81 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   double minElectronPt = 7.; // iMinPt;
-
-   // Be skeptical about this electron making it through
-   bool passesKinematics = false;
-   bool passesIso = false;
-   bool passesID = false;
-
-   bool passGsfTrackID = false;
-   bool passesCuts = false;
+   double minElectronPt = id == preselection ? 7.0 : (id == fakeable ? 10.0 : 15.0); // iMinPt;
+   bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
+   bool passesIso = ele.userFloat("miniIso") < 0.4;
 
    bool passesMVA = false;
-
    double eleMvaNonTrig = ele.userFloat("eleMvaId");
    float scEta = ele.userFloat("superClusterEta");
+   // VLooseIdEmu WP
+   if (scEta < 0.8)
+      passesMVA = eleMvaNonTrig > -0.7;
+   else if (scEta < 1.479)
+      passesMVA = eleMvaNonTrig > -0.83;
+   else
+      passesMVA = eleMvaNonTrig > -0.92;
+
+   bool passGsfTrackID = false;
+   if (ele.gsfTrack().isAvailable())
+      passGsfTrackID = fabs(ele.userFloat("dxy")) < 0.05 and fabs(ele.userFloat("dz")) < 0.1 and ele.userFloat("numMissingHits") <= 1;
+
+   bool passesCuts = false;
+   if (ele.pt() > 30) {
+      if (fabs(ele.eta()) < 0.8) {
+         passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                      ele.hcalOverEcal() < 0.10 &&
+                      ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                      ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+      }
+      else if (fabs(ele.eta()) < 1.479) {
+         passesCuts = ele.sigmaIetaIeta() < 0.011 &&
+                      ele.hcalOverEcal() < 0.10 &&
+                      ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
+                      ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
+      }
+      else if (fabs(ele.eta()) < 2.5) {
+         passesCuts = ele.sigmaIetaIeta() < 0.030 &&
+                      ele.hcalOverEcal() < 0.07 &&
+                      ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
+                      ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
+      }
+   } else {
+      passesCuts = true;
+   }
+
+   bool passesPreselection = passesKinematics and passesIso and passesMVA and passGsfTrackID and ele.userFloat("sip3D") < 8;
+
+   bool passesID = false;
+   bool passesJetCSV = false;
 
    switch (id) {
       case preselection:
-         // VLooseIdEmu WP
-         if (scEta < 0.8)
-            passesMVA = (eleMvaNonTrig > -0.7);
-         else if (scEta < 1.479)
-            passesMVA = (eleMvaNonTrig > -0.83);
-         else
-            passesMVA = (eleMvaNonTrig > -0.92);
-
-         if (ele.gsfTrack().isAvailable()) {
-            passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1);
-         }
-         passesKinematics = ((ele.pt() > minElectronPt) && (fabs(ele.eta()) < 2.5));
-
-         passesIso = ele.userFloat("miniIso") < 0.4;
-         passesID = (passGsfTrackID && passesMVA) && (ele.userFloat("sip3D") < 8);
+         passesID = passesPreselection;
          break;
       case fakeable:
-         passesKinematics = ele.pt() > 10;
-         passesIso = true;
-         if (ele.pt() > 30) {
-            if (fabs(ele.eta()) < 0.8) {
-               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
-                            ele.hcalOverEcal() < 0.10 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
-            }
-            else if (fabs(ele.eta()) < 1.479) {
-               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
-                            ele.hcalOverEcal() < 0.10 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
-            }
-            else if (fabs(ele.eta()) < 2.5) {
-               passesCuts = ele.sigmaIetaIeta() < 0.030 &&
-                            ele.hcalOverEcal() < 0.07 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
-            }
-            else
-               passesKinematics = false;
-         }
-         else
-            passesCuts = true;
-         //         passGsfTrackID = ele.userFloat("numMissingHits") == 0;
-         passGsfTrackID = 1;
          if (ele.userFloat("leptonMVA") > 0.75)
-            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < tight_csv_wp;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < tight_csv_wp;
          else
-            passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
+         passesID = passesPreselection and passesCuts and passesJetCSV;
          break;
       case mvabased:
-         passesKinematics = ele.pt() > 15.;
-         passesIso = true;
-         //         double cone_pt = 0.85 * ele.pt() / ele.userFloat("nearestJetPtRatio"); 
-         if (ele.pt() > 30) {
-            if (fabs(ele.eta()) < 0.8) {
-               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
-                            ele.hcalOverEcal() < 0.10 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
-            }
-            else if (fabs(ele.eta()) < 1.479) {
-               passesCuts = ele.sigmaIetaIeta() < 0.011 &&
-                            ele.hcalOverEcal() < 0.10 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
-            }
-            else if (fabs(ele.eta()) < 2.5) {
-               passesCuts = ele.sigmaIetaIeta() < 0.030 &&
-                            ele.hcalOverEcal() < 0.07 &&
-                            ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
-                            ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
-                            1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
-            }
-            else
-               passesKinematics = false;
-         }
-         else
-            {
-               passesCuts = true;
-            }
-         //passGsfTrackID = ele.userFloat("numMissingHits") == 0 && ele.isGsfCtfScPixChargeConsistent();
-         passGsfTrackID = 1;
-         passesID = passesCuts &&
-                    passGsfTrackID &&
-            //         ele.passConversionVeto() &&
-                    ele.userFloat("leptonMVA") > 0.75 &&
+         passesID = passesPreselection and
+                    passesCuts and
+                    ele.userFloat("leptonMVA") > 0.75 and
                     ele.userFloat("nearestJetCsv") < tight_csv_wp;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
          return false;
+         break;
       default:
          break;
    }
