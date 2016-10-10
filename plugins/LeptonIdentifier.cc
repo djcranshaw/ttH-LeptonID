@@ -44,7 +44,7 @@
 // class declaration
 //
 
-enum ID { nonIsolated, preselection, fakeable, cutbased, mvabased, looseCut, looseMVA, tightCut, tightMVA, selection };
+enum ID { nonIsolated, preselection, fakeable, mvabased, selection };
 
 class LeptonIdentifier : public edm::one::EDProducer<>
 {
@@ -231,86 +231,55 @@ LeptonIdentifier::mva(const pat::Electron &ele)
 }
 
 // ------------ id functions ------------
+
+// intermediate function for CHEP
+// https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2#Short_Term_Medium_Muon_Definitio
+bool isMediumMuon(const reco::Muon & recoMu)
+{
+   bool goodGlob = recoMu.isGlobalMuon() &&
+      recoMu.globalTrack()->normalizedChi2() < 3 &&
+      recoMu.combinedQuality().chi2LocalPosition < 12 &&
+      recoMu.combinedQuality().trkKink < 20;
+   bool isMedium = muon::isLooseMuon(recoMu) &&
+      recoMu.innerTrack()->validFraction() > 0.49 &&
+      muon::segmentCompatibility(recoMu) > (goodGlob ? 0.303 : 0.451);
+   return isMedium;
+}
+
 bool
 LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
-   double minMuonPt = 5.0; // iMinPt;
-   double maxMuonEta = 2.5; 
-
-   bool passesKinematics = false;
-   bool passesIso = false;
-   bool passesID = false;
+   double minMuonPt = id == preselection ? 5.0 : 10.0; // iMinPt;
+   double maxMuonEta = 2.4;
 
    bool passesMuonBestTrackID = false;
-   bool goodGlb = (mu.isGlobalMuon() && mu.userFloat("normalizedChiSq") < 3 && mu.userFloat("localChiSq") < 12 && mu.userFloat("trackKink") < 20);
-   bool mediumID = (mu.userFloat("validFraction") >= 0.8 && mu.segmentCompatibility() >= (goodGlb ? 0.303 : 0.451));
-   bool passesCuts = false;
+   if (mu.innerTrack().isAvailable()) { // innerTrack() // muonBestTrack // isAvailable
+      passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1 && (mu.userFloat("sip3D") < 8));
+   }
+
+   bool passesKinematics = (mu.pt() > minMuonPt) and (fabs(mu.eta()) < maxMuonEta);
+   bool passesIso = (mu.userFloat("miniIso") < 0.4);
+   bool passesPreselection = mu.isLooseMuon() && passesMuonBestTrackID;
+
+   bool passesID = false;
 
    switch (id) {
-      case looseMVA:
-         passesKinematics = true;
-         passesIso = true;
-         passesID = (mu.userFloat("leptonMVA") > 0.5 && mediumID);
-         break;
-      case tightMVA:
-         passesKinematics = true;
-         passesIso = true;
-         passesID = (mu.userFloat("leptonMVA") > 0.75 && mediumID); /////// <<--- the MVA cut !!!
-         break;
-      case looseCut:
-         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
-         passesIso = (mu.userFloat("relIso") < 0.5);
-         if (mu.innerTrack().isAvailable()) {
-            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
-         }
-         passesID = (passesMuonBestTrackID && (mu.isGlobalMuon() || mu.isTrackerMuon()) && mu.isPFMuon());
-         break;
-      case tightCut:
-         passesKinematics = ((mu.pt() >= minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
-         passesIso = (mu.userFloat("relIso") < 0.1);
-
-         if (mu.innerTrack().isAvailable() && mu.globalTrack().isAvailable()) {
-            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1);
-            passesCuts = (mu.isGlobalMuon() && mu.isPFMuon() && mu.userFloat("normalizedChiSq") < 10. && mu.userFloat("numValidMuonHits") > 0 &&
-                          mu.numberOfMatchedStations() > 1 && mu.userFloat("numValidPixelHits") > 0 &&
-                          mu.userFloat("trackerLayersWithMeasurement") > 5 && mu.userFloat("sip3D") < 4.);
-         }
-         passesID = (passesMuonBestTrackID && passesCuts);
-         break;
       case preselection:
-         passesKinematics = ((mu.pt() > minMuonPt) && (fabs(mu.eta()) < maxMuonEta));
-         passesIso = (mu.userFloat("miniIso") < 0.4);
-         if (mu.innerTrack().isAvailable()) { // innerTrack() // muonBestTrack // isAvailable
-            passesMuonBestTrackID = (fabs(mu.userFloat("dxy")) < 0.05 && fabs(mu.userFloat("dz")) < 0.1 && (mu.userFloat("sip3D") < 8));
-         }
-         // passesID = (( mu.isGlobalMuon() || mu.isTrackerMuon() ) && mu.isPFMuon();
-         passesID = mu.isLooseMuon() && passesMuonBestTrackID;
+         passesID = passesPreselection;
          break;
       case fakeable:
-         passesKinematics = mu.pt() > 10;
          if (mu.userFloat("leptonMVA") > 0.75)
-            passesID = mu.userFloat("nearestJetCsv") < tight_csv_wp;
+            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < tight_csv_wp;
          else
-            passesID = mu.userFloat("nearestJetCsv") < loose_csv_wp && mu.userFloat("nearestJetPtRatio") > 0.3;
+            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < loose_csv_wp and mu.userFloat("nearestJetPtRatio") > 0.3;
          passesIso = true;
-         break;
-      case cutbased:
-         passesKinematics = mu.pt() > 10;
-         passesIso = mu.userFloat("miniIso") < 0.2;
-         if (mu.muonBestTrack().isAvailable())  // muonBestTrack? innerTrack?
-            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
-         passesID = passesMuonBestTrackID && mu.userFloat("sip3D") < 4 && mu.isMediumMuon();
          break;
       case mvabased:
-         passesKinematics = mu.pt() > 10;
          passesIso = true;
-         //         if (mu.innerTrack().isAvailable())  // muonBestTrack?
-         //            passesMuonBestTrackID = mu.muonBestTrack()->ptError()/mu.muonBestTrack()->pt() < 0.2;
-         passesMuonBestTrackID = 1;
-         passesID = mu.userFloat("leptonMVA") > 0.75 &&
-                    mu.userFloat("nearestJetCsv") < tight_csv_wp &&
-                    passesMuonBestTrackID &&
-                    mu.isMediumMuon();
+         passesID = passesPreselection and
+            mu.userFloat("leptonMVA") > 0.75 and
+            mu.userFloat("nearestJetCsv") < tight_csv_wp and
+            isMediumMuon(mu);
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
@@ -341,46 +310,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    float scEta = ele.userFloat("superClusterEta");
 
    switch (id) {
-      case looseMVA:
-         passesKinematics = true;
-         passesIso = true;
-         passesID = (ele.userFloat("leptonMVA") > 0.5 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto());
-         break;
-      case tightMVA:
-         passesKinematics = true;
-         passesIso = true;
-         passesID = (ele.userFloat("leptonMVA") > 0.75 && ele.userFloat("numMissingHits") == 0 && ele.passConversionVeto()); /////// <<--- the MVA cut !!!
-         break;
-      case looseCut:
-         passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-         passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.userFloat("numMissingHits") <= 1);
-         passesIso = (ele.userFloat("relIso") < 0.5);
-         if (scEta <= 1.479) {
-            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.8 &&
-                          ele.full5x5_sigmaIetaIeta() < 0.01 && ele.hadronicOverEm() < 0.15);
-         } else if (scEta > 1.479 && scEta < 2.5) {
-            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.01 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.7 &&
-                          ele.full5x5_sigmaIetaIeta() < 0.03);
-         }
-         passesID = (passesCuts && passGsfTrackID);
-         break;
-      case tightCut:
-         passesKinematics = ((ele.pt() >= minElectronPt) && (fabs(ele.eta()) < 2.5));
-         passGsfTrackID = (fabs(ele.userFloat("dxy")) < 0.05 && fabs(ele.userFloat("dz")) < 0.1 && ele.isGsfCtfScPixChargeConsistent() &&
-                           ele.userFloat("numMissingHits") == 0 && ele.userFloat("sip3D") < 4);
-         passesIso = (ele.userFloat("relIso") < 0.1);
-
-         if (scEta <= 1.479) {
-            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.004 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.06 &&
-                          ele.full5x5_sigmaIetaIeta() < 0.01 && ele.hadronicOverEm() < 0.12);
-         } else if (scEta > 1.479 && scEta < 2.5) {
-            passesCuts = (fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.007 && fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.03 &&
-                          ele.full5x5_sigmaIetaIeta() < 0.03 && ele.hadronicOverEm() < 0.10);
-         }
-         passesID = (passesCuts && passGsfTrackID);
-         break;
       case preselection:
-
          // VLooseIdEmu WP
          if (scEta < 0.8)
             passesMVA = (eleMvaNonTrig > -0.7);
@@ -436,21 +366,6 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
             passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < tight_csv_wp;
          else
             passesID = passesCuts && passGsfTrackID && ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
-         break;
-      case cutbased:
-         // Tight WP
-         if (scEta < 0.8)
-            passesMVA = eleMvaNonTrig > 0.87;
-         else if (scEta < 1.479)
-            passesMVA = eleMvaNonTrig > 0.60;
-         else
-            passesMVA = eleMvaNonTrig > 0.17;
-         passesKinematics = ele.pt() > 15;
-         passesIso = ele.userFloat("miniIso") < 0.1;
-         passGsfTrackID = ele.userFloat("numMissingHits") == 0 &&
-                          ele.isGsfCtfScPixChargeConsistent()
-                          && ele.userFloat("sip3D") < 4;
-         passesID = passGsfTrackID && passesMVA && ele.passConversionVeto();
          break;
       case mvabased:
          passesKinematics = ele.pt() > 15.;
@@ -532,10 +447,6 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
          passesID = (tau.tauID("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          //         passesID = (tau.TauDiscriminator("decayModeFindingOldDMs") > 0.5) && passesPVassoc;
          break;
-      case looseCut:
-      case looseMVA:
-      case tightCut:
-      case tightMVA:
       default:
          break;
    }
@@ -622,22 +533,12 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
-   lepton.addUserFloat("idLooseCut", passes(lepton, looseCut));
-   lepton.addUserFloat("idTightCut", passes(lepton, tightCut));
 
    if (lepton.userFloat("idPreselection") > .5) {
-      //      lepton.addUserFloat("idLooseMVA", passes(lepton, looseMVA));
-      lepton.addUserFloat("idLooseMVA", passes(lepton, fakeable));
-      //      lepton.addUserFloat("idTightMVA", passes(lepton, tightMVA));
-      lepton.addUserFloat("idTightMVA", passes(lepton, mvabased));
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
-      lepton.addUserFloat("idCutBased", passes(lepton, cutbased));
       lepton.addUserFloat("idMVABased", passes(lepton, mvabased));
    } else {
-      lepton.addUserFloat("idLooseMVA", -666.);
-      lepton.addUserFloat("idTightMVA", -666.);
       lepton.addUserFloat("idFakeable", -666.);
-      lepton.addUserFloat("idCutBased", -666.);
       lepton.addUserFloat("idMVABased", -666.);
    }
 }
