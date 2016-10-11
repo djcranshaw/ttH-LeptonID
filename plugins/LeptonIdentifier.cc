@@ -440,7 +440,9 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    float njet_ndau_charged = 0.;
 
    if (jets_.size() > 0) {
-      njet_csv = max(matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"), float(0.0));
+      njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
+      if (njet_csv < 0)
+         njet_csv = -10.;
 
       for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
 
