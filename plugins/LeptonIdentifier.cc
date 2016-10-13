@@ -320,7 +320,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                       ele.hcalOverEcal() < 0.10 &&
                       ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
                       ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.05 &&
                       1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
       }
       else if (fabs(ele.eta()) < 1.479) {
@@ -328,7 +328,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                       ele.hcalOverEcal() < 0.10 &&
                       ele.deltaEtaSuperClusterTrackAtVtx() < 0.01 &&
                       ele.deltaPhiSuperClusterTrackAtVtx() < 0.04 &&
-                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.05 &&
                       1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.010;
       }
       else if (fabs(ele.eta()) < 2.5) {
@@ -336,7 +336,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                       ele.hcalOverEcal() < 0.07 &&
                       ele.deltaEtaSuperClusterTrackAtVtx() < 0.008 &&
                       ele.deltaPhiSuperClusterTrackAtVtx() < 0.07 &&
-                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.5 &&
+                      1.0/ele.ecalEnergy() - 1.0/ele.p() > -0.05 &&
                       1.0/ele.ecalEnergy() - 1.0/ele.p() < 0.005;
       }
    } else {
