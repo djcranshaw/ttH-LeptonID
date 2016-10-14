@@ -419,7 +419,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
 
    for (const auto &j : jets_) {
       double newDR = helper_.DeltaR(&j, &lepton);
-      if (newDR < dR) {
+      if (newDR < dR and newDR < .4) {
          dR = newDR;
          matchedJet = j;
          matchedJetL1 = j;
@@ -439,7 +439,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    float njet_pt_rel = 0.;
    float njet_ndau_charged = 0.;
 
-   if (jets_.size() > 0) {
+   if (jets_.size() > 0 and dR < .4 and matchedJet.numberOfSourceCandidatePtrs() > 1) {
       njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
       if (njet_csv < 0)
          njet_csv = -10.;
