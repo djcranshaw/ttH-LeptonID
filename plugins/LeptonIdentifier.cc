@@ -466,7 +466,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       }
 
 
-      if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4 and dR <= 0.5) {
+      if (dR <= 0.4 and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
          if ((matchedJet.p4() * (1. / corr_factor) - lepton.p4()).Rho() < 1e-4)
             lepAwareJetp4 = lepton.p4();
@@ -480,6 +480,11 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          else njet_pt_rel = l4.Perp((j4 - l4).Vect());
       }
    }
+
+   // std::cout << "---" << std::endl;
+   // std::cout << lepton.p4().E() << std::endl;
+   // std::cout << '\t' << njet_csv << std::endl;
+   // std::cout << '\t' << njet_csv << std::endl;
 
    lepton.addUserFloat("nearestJetCsv", njet_csv);
    lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
