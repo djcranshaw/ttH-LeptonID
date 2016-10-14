@@ -557,16 +557,6 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
    auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaTrigValues, mvaTrigCategories);
 
-   // auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
-
-   //    cout << "first raw jet energy before corr: " << (*input_jet)[0].correctedJet(0).p4().E() << endl;
-   // const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", setup);
-   // const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFCHSL1L2L3Residual", setup);
-   // helper_.SetJetCorrector(corrector);
-   // auto raw_jets = helper_.GetUncorrectedJets(*input_jet);
-   // auto corr_jets = helper_.GetCorrectedJets(raw_jets, event, setup);
-   // jets_ = helper_.GetSelectedJets(corr_jets, 5., 2.4, jetID::none, '-');
-
    jets_ = helper_.GetSelectedJets(*input_jet, 5., 2.4, jetID::none, '-'); // already corrected (?)
 
    for (auto mu : *input_mu) {
