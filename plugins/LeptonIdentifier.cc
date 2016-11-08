@@ -313,8 +313,12 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    if (ele.gsfTrack().isAvailable())
       passGsfTrackID = fabs(ele.userFloat("dxy")) < 0.05 and fabs(ele.userFloat("dz")) < 0.1 and ele.userFloat("numMissingHits") <= 1;
 
+   float corrected_pt = ele.pt();
+   if (ele.userFloat("leptonMVA") < 0.75)
+      corrected_pt = 0.85 * corrected_pt / ele.userFloat("nearestJetPtRatio");
+
    bool passesCuts = false;
-   if (ele.pt() > 30) {
+   if (corrected_pt > 30) {
       if (fabs(ele.eta()) < 0.8) {
          passesCuts = ele.sigmaIetaIeta() < 0.011 &&
                       ele.hcalOverEcal() < 0.10 &&
@@ -357,13 +361,18 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
             passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
          else
             passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
-         passesID = passesPreselection and passesCuts and passesJetCSV;
+         passesID = passesPreselection and
+                    passesCuts and
+                    passesJetCSV and
+                    ele.userFloat("numMissingHits") == 0.;
          break;
       case mvabased:
          passesID = passesPreselection and
                     passesCuts and
+                    ele.passConversionVeto() and
                     ele.userFloat("leptonMVA") > 0.75 and
-                    ele.userFloat("nearestJetCsv") < medium_csv_wp;
+                    ele.userFloat("nearestJetCsv") < medium_csv_wp and
+                    ele.userFloat("numMissingHits") == 0.;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
@@ -488,6 +497,11 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
+
+   if (abs(lepton.pdgId()) == 11 and mva_value < .75)
+      lepton.addUserFloat("correctedPt", .85 * lepton.pt() / njet_pt_ratio);
+   else
+      lepton.addUserFloat("correctedPt", lepton.pt());
 
    if (lepton.userFloat("idPreselection") > .5) {
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
