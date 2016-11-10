@@ -35,6 +35,7 @@
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
 #include "MiniAOD/MiniAODHelper/interface/MiniAODHelper.h"
 
@@ -680,6 +681,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       //       }
 
       bool  track_avbl = false;
+      float dxy_old = -666.;
+      float dz_old = -666.;
       float dxy = -666.;
       float dz = -666.;
       float id_non_isolated = -666.;
@@ -691,14 +694,23 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
          if (track) {
             track_avbl = true;
-            dxy = track->dxy(vertex_.position());
-            dz = track->dz(vertex_.position());
+            dxy_old = track->dxy(vertex_.position());
+            dz_old = track->dz(vertex_.position());
          }
       }
 
+      // As in the SM Htautau analysis
+      // still need to understand why dz != dz_old
+      auto packedLeadTauCand =
+         dynamic_cast<pat::PackedCandidate const*>(tau.leadChargedHadrCand().get());
+      dz = packedLeadTauCand->dz();
+      dxy = packedLeadTauCand->dxy();
+
+      tau.addUserFloat("dxy_old", dxy_old);
+      tau.addUserFloat("dz_old", dz_old);
       tau.addUserFloat("dxy", dxy);
       tau.addUserFloat("dz", dz);
-
+      
       if (track_avbl) {
          id_non_isolated = passes(tau, nonIsolated);
          id_preselection = passes(tau, preselection);
