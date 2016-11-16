@@ -266,6 +266,12 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 
    bool passesID = false;
 
+   float corrected_pt = mu.pt();
+   if (mu.userFloat("leptonMVA") < 0.75) {
+      corrected_pt = 0.85 * corrected_pt / mu.userFloat("nearestJetPtRatio");
+      passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
+   }
+
    switch (id) {
       case preselection:
          passesID = passesPreselection;
