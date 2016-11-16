@@ -104,6 +104,8 @@ private:
    reco::Vertex vertex_;
    pat::JetCollection jets_;
 
+   bool tight_objects_;
+
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
@@ -125,7 +127,8 @@ private:
 // constructors and destructor
 //
 LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
-      : mu_minpt_(config.getParameter<double>("muonMinPt")),
+      : tight_objects_(config.getParameter<bool>("tightObjects")),
+        mu_minpt_(config.getParameter<double>("muonMinPt")),
         ele_minpt_(config.getParameter<double>("electronMinPt")),
         tau_minpt_(config.getParameter<double>("tauMinPt"))
 {
@@ -264,6 +267,12 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 
    bool passesID = false;
 
+   float corrected_pt = mu.pt();
+   if (mu.userFloat("leptonMVA") < 0.75) {
+      corrected_pt = 0.85 * corrected_pt / mu.userFloat("nearestJetPtRatio");
+      passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
+   }
+
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -295,7 +304,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   double minElectronPt = id == preselection ? 7.0 : (id == fakeable ? 10.0 : 15.0); // iMinPt;
+   double minElectronPt = id == preselection ? 7.0 : 10.0; // iMinPt;
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
    bool passesIso = ele.userFloat("miniIso") < 0.4;
 
@@ -315,8 +324,10 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
       passGsfTrackID = fabs(ele.userFloat("dxy")) < 0.05 and fabs(ele.userFloat("dz")) < 0.1 and ele.userFloat("numMissingHits") <= 1;
 
    float corrected_pt = ele.pt();
-   if (ele.userFloat("leptonMVA") < 0.75)
+   if (ele.userFloat("leptonMVA") < 0.75) {
       corrected_pt = 0.85 * corrected_pt / ele.userFloat("nearestJetPtRatio");
+      passesKinematics = (corrected_pt > minElectronPt) and (fabs(ele.eta()) < 2.5);
+   }
 
    bool passesCuts = false;
    if (corrected_pt > 30) {
@@ -353,6 +364,11 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    bool passesID = false;
    bool passesJetCSV = false;
 
+   bool passesObjectSelection = true;
+
+   if (tight_objects_ and (id == fakeable or id == mvabased))
+      passesObjectSelection = ele.userFloat("numMissingHits") == 0 and ele.passConversionVeto();
+
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -364,16 +380,14 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
             passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
          passesID = passesPreselection and
                     passesCuts and
-                    passesJetCSV and
-                    ele.userFloat("numMissingHits") == 0.;
+                    passesJetCSV;
          break;
       case mvabased:
          passesID = passesPreselection and
                     passesCuts and
                     ele.passConversionVeto() and
                     ele.userFloat("leptonMVA") > 0.75 and
-                    ele.userFloat("nearestJetCsv") < medium_csv_wp and
-                    ele.userFloat("numMissingHits") == 0.;
+                    ele.userFloat("nearestJetCsv") < medium_csv_wp;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
@@ -383,7 +397,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
    }
 
-   return (passesKinematics && passesIso && passesID);
+   return (passesKinematics && passesIso && passesID && passesObjectSelection);
 }
 
 bool
