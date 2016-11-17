@@ -270,7 +270,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
    float corrected_pt = mu.pt();
    if (mu.userFloat("leptonMVA") < 0.75) {
       corrected_pt = 0.85 * corrected_pt / mu.userFloat("nearestJetPtRatio");
-      passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
+      //passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
    }
 
    switch (id) {
@@ -326,7 +326,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    float corrected_pt = ele.pt();
    if (ele.userFloat("leptonMVA") < 0.75) {
       corrected_pt = 0.85 * corrected_pt / ele.userFloat("nearestJetPtRatio");
-      passesKinematics = (corrected_pt > minElectronPt) and (fabs(ele.eta()) < 2.5);
+      //passesKinematics = (corrected_pt > minElectronPt) and (fabs(ele.eta()) < 2.5);
    }
 
    bool passesCuts = false;
