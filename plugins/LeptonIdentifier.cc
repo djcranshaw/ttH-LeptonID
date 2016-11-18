@@ -35,6 +35,7 @@
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
 #include "MiniAOD/MiniAODHelper/interface/MiniAODHelper.h"
 
@@ -103,6 +104,8 @@ private:
    reco::Vertex vertex_;
    pat::JetCollection jets_;
 
+   bool tight_objects_;
+
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
@@ -124,7 +127,8 @@ private:
 // constructors and destructor
 //
 LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
-      : mu_minpt_(config.getParameter<double>("muonMinPt")),
+      : tight_objects_(config.getParameter<bool>("tightObjects")),
+        mu_minpt_(config.getParameter<double>("muonMinPt")),
         ele_minpt_(config.getParameter<double>("electronMinPt")),
         tau_minpt_(config.getParameter<double>("tauMinPt"))
 {
@@ -263,6 +267,12 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 
    bool passesID = false;
 
+   float corrected_pt = mu.pt();
+   if (mu.userFloat("leptonMVA") < 0.75) {
+      corrected_pt = 0.85 * corrected_pt / mu.userFloat("nearestJetPtRatio");
+      //passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
+   }
+
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -294,7 +304,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   double minElectronPt = id == preselection ? 7.0 : (id == fakeable ? 10.0 : 15.0); // iMinPt;
+   double minElectronPt = id == preselection ? 7.0 : 10.0; // iMinPt;
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
    bool passesIso = ele.userFloat("miniIso") < 0.4;
 
@@ -313,8 +323,14 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    if (ele.gsfTrack().isAvailable())
       passGsfTrackID = fabs(ele.userFloat("dxy")) < 0.05 and fabs(ele.userFloat("dz")) < 0.1 and ele.userFloat("numMissingHits") <= 1;
 
+   float corrected_pt = ele.pt();
+   if (ele.userFloat("leptonMVA") < 0.75) {
+      corrected_pt = 0.85 * corrected_pt / ele.userFloat("nearestJetPtRatio");
+      //passesKinematics = (corrected_pt > minElectronPt) and (fabs(ele.eta()) < 2.5);
+   }
+
    bool passesCuts = false;
-   if (ele.pt() > 30) {
+   if (corrected_pt > 30) {
       if (fabs(ele.eta()) < 0.8) {
          passesCuts = ele.sigmaIetaIeta() < 0.011 &&
                       ele.hcalOverEcal() < 0.10 &&
@@ -348,6 +364,11 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    bool passesID = false;
    bool passesJetCSV = false;
 
+   bool passesObjectSelection = true;
+
+   if (tight_objects_ and (id == fakeable or id == mvabased))
+      passesObjectSelection = ele.userFloat("numMissingHits") == 0 and ele.passConversionVeto();
+
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -357,11 +378,14 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
             passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
          else
             passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.3;
-         passesID = passesPreselection and passesCuts and passesJetCSV;
+         passesID = passesPreselection and
+                    passesCuts and
+                    passesJetCSV;
          break;
       case mvabased:
          passesID = passesPreselection and
                     passesCuts and
+                    ele.passConversionVeto() and
                     ele.userFloat("leptonMVA") > 0.75 and
                     ele.userFloat("nearestJetCsv") < medium_csv_wp;
          break;
@@ -373,7 +397,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
    }
 
-   return (passesKinematics && passesIso && passesID);
+   return (passesKinematics && passesIso && passesID && passesObjectSelection);
 }
 
 bool
@@ -488,6 +512,11 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
+
+   if (abs(lepton.pdgId()) == 11 and mva_value < .75)
+      lepton.addUserFloat("correctedPt", .85 * lepton.pt() / njet_pt_ratio);
+   else
+      lepton.addUserFloat("correctedPt", lepton.pt());
 
    if (lepton.userFloat("idPreselection") > .5) {
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
@@ -666,6 +695,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       //       }
 
       bool  track_avbl = false;
+      float dxy_old = -666.;
+      float dz_old = -666.;
       float dxy = -666.;
       float dz = -666.;
       float id_non_isolated = -666.;
@@ -677,14 +708,23 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
          if (track) {
             track_avbl = true;
-            dxy = track->dxy(vertex_.position());
-            dz = track->dz(vertex_.position());
+            dxy_old = track->dxy(vertex_.position());
+            dz_old = track->dz(vertex_.position());
          }
       }
 
+      // As in the SM Htautau analysis
+      // still need to understand why dz != dz_old
+      auto packedLeadTauCand =
+         dynamic_cast<pat::PackedCandidate const*>(tau.leadChargedHadrCand().get());
+      dz = packedLeadTauCand->dz();
+      dxy = packedLeadTauCand->dxy();
+
+      tau.addUserFloat("dxy_old", dxy_old);
+      tau.addUserFloat("dz_old", dz_old);
       tau.addUserFloat("dxy", dxy);
       tau.addUserFloat("dz", dz);
-
+      
       if (track_avbl) {
          id_non_isolated = passes(tau, nonIsolated);
          id_preselection = passes(tau, preselection);
