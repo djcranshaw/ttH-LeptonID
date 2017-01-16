@@ -109,8 +109,8 @@ private:
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
-   double loose_csv_wp = .46;
-   double medium_csv_wp = .80;
+   double loose_csv_wp; //= .46;
+   double medium_csv_wp; //= .80;
    // double loose_csv_wp = .605;
    // double medium_csv_wp = .89;
 };
@@ -130,7 +130,9 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
       : tight_objects_(config.getParameter<bool>("tightObjects")),
         mu_minpt_(config.getParameter<double>("muonMinPt")),
         ele_minpt_(config.getParameter<double>("electronMinPt")),
-        tau_minpt_(config.getParameter<double>("tauMinPt"))
+        tau_minpt_(config.getParameter<double>("tauMinPt")),
+        loose_csv_wp(config.getParameter<double>("LooseCSVWP")),
+        medium_csv_wp(config.getParameter<double>("MediumCSVWP"))
 {
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
