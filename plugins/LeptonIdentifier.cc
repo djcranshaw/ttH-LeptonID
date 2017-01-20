@@ -247,7 +247,7 @@ bool isMediumMuon(const reco::Muon & recoMu)
       recoMu.combinedQuality().chi2LocalPosition < 12 &&
       recoMu.combinedQuality().trkKink < 20;
    bool isMedium = muon::isLooseMuon(recoMu) &&
-      recoMu.innerTrack()->validFraction() > 0.49 &&
+      recoMu.innerTrack()->validFraction() > 0.8 &&
       muon::segmentCompatibility(recoMu) > (goodGlob ? 0.303 : 0.451);
    return isMedium;
 }
@@ -368,9 +368,6 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 
    bool passesObjectSelection = true;
 
-   if (tight_objects_ and (id == fakeable or id == mvabased))
-      passesObjectSelection = ele.userFloat("numMissingHits") == 0 and ele.passConversionVeto();
-
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -387,7 +384,6 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
       case mvabased:
          passesID = passesPreselection and
                     passesCuts and
-                    ele.passConversionVeto() and
                     ele.userFloat("leptonMVA") > 0.75 and
                     ele.userFloat("nearestJetCsv") < medium_csv_wp;
          break;
@@ -411,7 +407,8 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
    bool passesID = false;
 
    bool passesKinematics = ((tau.pt() > minTauPt) && (fabs(tau.eta()) < 2.3));
-   bool passesPVassoc = (fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2);
+   bool passesPVassoc = ((fabs(tau.userFloat("dxy")) < 1000) && (fabs(tau.userFloat("dz")) < 0.2));
+
 
    switch (id) {
       case nonIsolated:
@@ -515,11 +512,12 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    lepton.addUserFloat("leptonMVA", mva_value);
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
 
-   if (abs(lepton.pdgId()) == 11 and mva_value < .75)
+   if (!passes(lepton, mvabased)) {
       lepton.addUserFloat("correctedPt", .85 * lepton.pt() / njet_pt_ratio);
-   else
+   } else{
       lepton.addUserFloat("correctedPt", lepton.pt());
-
+   }
+   
    if (lepton.userFloat("idPreselection") > .5) {
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
       lepton.addUserFloat("idMVABased", passes(lepton, mvabased));
@@ -664,8 +662,10 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
       ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
       ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
+
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
+
       ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
       // leptonMVA vars
       ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt / ele.pt());
@@ -682,6 +682,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       eles->push_back(ele);
    }
 
+
    for (auto tau : *input_tau) {
       if (tau.pt() < tau_minpt_)
          continue;
@@ -696,7 +697,6 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       // 	}
       //       }
 
-      bool  track_avbl = false;
       float dxy_old = -666.;
       float dz_old = -666.;
       float dxy = -666.;
@@ -709,7 +709,6 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
          auto track = tau.leadChargedHadrCand()->bestTrack();
 
          if (track) {
-            track_avbl = true;
             dxy_old = track->dxy(vertex_.position());
             dz_old = track->dz(vertex_.position());
          }
@@ -727,11 +726,9 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       tau.addUserFloat("dxy", dxy);
       tau.addUserFloat("dz", dz);
       
-      if (track_avbl) {
-         id_non_isolated = passes(tau, nonIsolated);
-         id_preselection = passes(tau, preselection);
-         id_selection = passes(tau, selection);
-      }
+      id_non_isolated = passes(tau, nonIsolated);
+      id_preselection = passes(tau, preselection);
+      id_selection = passes(tau, selection);
 
       tau.addUserFloat("idNonIsolated", id_non_isolated);
       tau.addUserFloat("idPreselection", id_preselection);
