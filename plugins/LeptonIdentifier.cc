@@ -96,10 +96,10 @@ private:
    edm::EDGetTokenT<pat::MuonCollection> mu_token_;
    edm::EDGetTokenT<pat::TauCollection> tau_token_;
    edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
-   edm::EDGetTokenT<edm::ValueMap<float>> mva_trig_val_token_;
-   edm::EDGetTokenT<edm::ValueMap<int>> mva_trig_cat_token_;
-   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
-   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesHZZMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesHZZMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesGPMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesGPMapToken_;
 
    reco::Vertex vertex_;
    pat::JetCollection jets_;
@@ -111,8 +111,6 @@ private:
    double tau_minpt_;
    double loose_csv_wp; //= .46;
    double medium_csv_wp; //= .80;
-   // double loose_csv_wp = .605;
-   // double medium_csv_wp = .89;
 };
 
 //
@@ -146,15 +144,15 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
 
-   mva_trig_val_token_ =
-      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Values"));
-   mva_trig_cat_token_ =
-      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15Trig25nsV1Categories"));
+   mvaValuesHZZMapToken_ =
+      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16HZZV1Values"));
+   mvaCategoriesHZZMapToken_ =
+      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16HZZV1Categories"));
 
-   mvaValuesMapToken_ =
-      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values"));
-   mvaCategoriesMapToken_ =
-      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Categories"));
+   mvaValuesGPMapToken_ =
+      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Values"));
+   mvaCategoriesGPMapToken_ =
+      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Categories"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
    // methods we access, which could be spun off, anyways.
@@ -311,15 +309,28 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    bool passesIso = ele.userFloat("miniIso") < 0.4;
 
    bool passesMVA = false;
-   double eleMvaNonTrig = ele.userFloat("eleMvaId");
+   double eleMvaGP = ele.userFloat("eleMvaId");
+   double eleMvaHZZ = ele.userFloat("eleMvaIdHZZ");
    float scEta = ele.userFloat("superClusterEta");
+
    // VLooseIdEmu WP
-   if (scEta < 0.8)
-      passesMVA = eleMvaNonTrig > -0.7;
-   else if (scEta < 1.479)
-      passesMVA = eleMvaNonTrig > -0.83;
-   else
-      passesMVA = eleMvaNonTrig > -0.92;
+   // c.f. https://github.com/CERN-PH-CMG/cmg-cmssw/blob/a76bc9fb439b6238af56649961b3952dbef95626/PhysicsTools/Heppy/python/physicsobjects/Electron.py#L361
+   double _vlow[3] = {-0.30,-0.46,-0.63};
+   double _low[3] = {-0.86,-0.85,-0.81};
+   double _high[3] = {-0.96,-0.96,-0.95};
+
+   if (ele.pt() <= 10) {
+      // use HZZ MVA if electron pt less than 10 GeV
+      passesMVA = eleMvaHZZ > _vlow[(scEta>=0.8)+(scEta>=1.479)];
+   }
+   else {
+      // _low below 15 GeV, _high above 25 GeV, interpolation in between
+      double a = _low[(scEta>=0.8)+(scEta>=1.479)];
+      double b = _high[(scEta>=0.8)+(scEta>=1.479)];
+      double c = (a-b)/10;
+      double cut = std::min(a,std::max(b, a-c*(ele.pt()-15) ));
+      passesMVA = eleMvaGP > cut;
+   }
 
    bool passGsfTrackID = false;
    if (ele.gsfTrack().isAvailable())
@@ -543,11 +554,11 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    edm::Handle<pat::TauCollection> input_tau;
    edm::Handle<reco::VertexCollection> input_vtx;
 
-   edm::Handle<edm::ValueMap<float>> mvaValues;
-   edm::Handle<edm::ValueMap<int>> mvaCategories;
+   edm::Handle<edm::ValueMap<float>> mvaValuesHZZ;
+   edm::Handle<edm::ValueMap<int>> mvaCategoriesHZZ;
 
-   edm::Handle<edm::ValueMap<float>> mvaTrigValues;
-   edm::Handle<edm::ValueMap<int>> mvaTrigCategories;
+   edm::Handle<edm::ValueMap<float>> mvaValuesGP;
+   edm::Handle<edm::ValueMap<int>> mvaCategoriesGP;
 
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
@@ -556,12 +567,13 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    event.getByToken(mu_token_, input_mu);
    event.getByToken(tau_token_, input_tau);
    event.getByToken(vtx_token_, input_vtx);
-   event.getByToken(mva_trig_val_token_, mvaTrigValues);
-   event.getByToken(mva_trig_cat_token_, mvaTrigCategories);
-   event.getByToken(mvaValuesMapToken_, mvaValues);
-   event.getByToken(mvaCategoriesMapToken_, mvaCategories);
+   event.getByToken(mvaValuesHZZMapToken_, mvaValuesHZZ);
+   event.getByToken(mvaCategoriesHZZMapToken_, mvaCategoriesHZZ);
+   event.getByToken(mvaValuesGPMapToken_, mvaValuesGP);
+   event.getByToken(mvaCategoriesGPMapToken_, mvaCategoriesGP);
 
-   const edm::ValueMap<float> ele_mvaValues = (*mvaValues.product());
+   const edm::ValueMap<float> ele_mvaValuesGP = (*mvaValuesGP.product());
+   const edm::ValueMap<float> ele_mvaValuesHZZ = (*mvaValuesHZZ.product());
 
    helper_.SetRho(*rho);
    helper_.SetPackedCandidates(*packedCands);
@@ -584,7 +596,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       return;
    }
 
-   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaTrigValues, mvaTrigCategories);
+   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValuesGP, mvaCategoriesGP);
 
    jets_ = helper_.GetSelectedJets(*input_jet, -666., 666., jetID::none, '-'); // already corrected (?)
 
@@ -672,7 +684,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("neutralRelIso", ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
 
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
-      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaId", ele_mvaValuesGP.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaIdHZZ", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
 
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
