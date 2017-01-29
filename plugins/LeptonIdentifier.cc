@@ -177,7 +177,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
       m->AddVariable("LepGood_dz := log(abs(LepGood_dz))", &vardz);
    }
 
-   ele_reader_->AddVariable("LepGood_mvaIdSpring15", &varmvaId);
+   ele_reader_->AddVariable("LepGood_mvaIdSpring16HZZ", &varmvaId);
    mu_reader_->AddVariable("LepGood_segmentCompatibility", &varSegCompat);
 
    const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/ttH/LeptonID/data";
@@ -229,7 +229,7 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varsip3d = ele.userFloat("sip3D");
    vardxy = log(fabs(ele.userFloat("dxy")));
    vardz = log(fabs(ele.userFloat("dz")));
-   varmvaId = ele.userFloat("eleMvaId");
+   varmvaId = ele.userFloat("eleMvaIdHZZ");
 
    return ele_reader_->EvaluateMVA("BDTG method");
 }
