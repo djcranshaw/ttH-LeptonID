@@ -111,6 +111,8 @@ private:
    double tau_minpt_;
    double loose_csv_wp; //= .46;
    double medium_csv_wp; //= .80;
+
+   bool hip_safe_;
 };
 
 //
@@ -130,7 +132,8 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
         ele_minpt_(config.getParameter<double>("electronMinPt")),
         tau_minpt_(config.getParameter<double>("tauMinPt")),
         loose_csv_wp(config.getParameter<double>("LooseCSVWP")),
-        medium_csv_wp(config.getParameter<double>("MediumCSVWP"))
+        medium_csv_wp(config.getParameter<double>("MediumCSVWP")),
+        hip_safe_(config.getParameter<bool>("IsHIPSafe"))
 {
    produces<pat::ElectronCollection>();
    produces<pat::MuonCollection>();
@@ -238,14 +241,14 @@ LeptonIdentifier::mva(const pat::Electron &ele)
 
 // intermediate function for CHEP
 // https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2#Short_Term_Medium_Muon_Definitio
-bool isMediumMuon(const reco::Muon & recoMu)
+bool isMediumMuon(const reco::Muon & recoMu, bool isHIPSafe)
 {
    bool goodGlob = recoMu.isGlobalMuon() &&
       recoMu.globalTrack()->normalizedChi2() < 3 &&
       recoMu.combinedQuality().chi2LocalPosition < 12 &&
       recoMu.combinedQuality().trkKink < 20;
    bool isMedium = muon::isLooseMuon(recoMu) &&
-      recoMu.innerTrack()->validFraction() > 0.8 &&
+      recoMu.innerTrack()->validFraction() > (isHIPSafe ? 0.49 : 0.80) &&
       muon::segmentCompatibility(recoMu) > (goodGlob ? 0.303 : 0.451);
    return isMedium;
 }
@@ -289,7 +292,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          passesID = passesPreselection and
             mu.userFloat("leptonMVA") > 0.75 and
             mu.userFloat("nearestJetCsv") < medium_csv_wp and
-            isMediumMuon(mu);
+            isMediumMuon(mu, hip_safe_);
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";

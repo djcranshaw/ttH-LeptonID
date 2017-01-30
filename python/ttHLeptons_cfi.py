@@ -13,4 +13,5 @@ ttHLeptons = cms.EDProducer(
     tauMinPt=cms.double(20.0),
     LooseCSVWP=cms.double(0.46),
     MediumCSVWP=cms.double(0.80),
+    IsHIPSafe=cms.bool(False),
 )
