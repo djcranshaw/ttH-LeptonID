@@ -112,6 +112,8 @@ private:
    double loose_csv_wp; //= .46;
    double medium_csv_wp; //= .80;
 
+   std::string jectag_;
+
    bool hip_safe_;
 };
 
@@ -133,6 +135,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
         tau_minpt_(config.getParameter<double>("tauMinPt")),
         loose_csv_wp(config.getParameter<double>("LooseCSVWP")),
         medium_csv_wp(config.getParameter<double>("MediumCSVWP")),
+        jectag_(config.getParameter<std::string>("JECTag")),
         hip_safe_(config.getParameter<bool>("IsHIPSafe"))
 {
    produces<pat::ElectronCollection>();
@@ -462,7 +465,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          matchedJetL1 = j;
          matchedJetRaw = j;
 
-         matchedJetL1.setP4(j.correctedJet("L1FastJet","none","").p4());
+         matchedJetL1.setP4(j.correctedJet("L1FastJet", "none", jectag_).p4());
          matchedJetRaw.setP4(j.correctedJet(0).p4());
          corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
          L1_SF = matchedJetL1.p4().E() / matchedJetRaw.p4().E();
