@@ -14,5 +14,5 @@ ttHLeptons = cms.EDProducer(
     LooseCSVWP=cms.double(0.46),
     MediumCSVWP=cms.double(0.80),
     IsHIPSafe=cms.bool(False),
-    JECTag=''
+    JECTag=cms.string('')
 )
