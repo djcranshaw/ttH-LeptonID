@@ -104,8 +104,6 @@ private:
    reco::Vertex vertex_;
    pat::JetCollection jets_;
 
-   bool tight_objects_;
-
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
@@ -129,8 +127,7 @@ private:
 // constructors and destructor
 //
 LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
-      : tight_objects_(config.getParameter<bool>("tightObjects")),
-        mu_minpt_(config.getParameter<double>("muonMinPt")),
+      : mu_minpt_(config.getParameter<double>("muonMinPt")),
         ele_minpt_(config.getParameter<double>("electronMinPt")),
         tau_minpt_(config.getParameter<double>("tauMinPt")),
         loose_csv_wp(config.getParameter<double>("LooseCSVWP")),

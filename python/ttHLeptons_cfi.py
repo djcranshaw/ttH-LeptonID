@@ -2,7 +2,6 @@ import FWCore.ParameterSet.Config as cms
 
 ttHLeptons = cms.EDProducer(
     'LeptonIdentifier',
-    tightObjects=cms.bool(False),
     rhoParam=cms.InputTag('fixedGridRhoFastjetAll'),
     electrons=cms.InputTag('slimmedElectrons'),
     electronMinPt=cms.double(7.0),
