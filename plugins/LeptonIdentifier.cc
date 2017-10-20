@@ -486,18 +486,20 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          float dR = helper_.DeltaR(&matchedJet, &(dau_jet.p4()));
          
          bool isgoodtrk = false;
-         const reco::Track trk = dau_jet.pseudoTrack();
-         const math::XYZPoint vtx_position = lepton.vertex();
+         try {
+            const reco::Track trk = dau_jet.pseudoTrack();
+            const math::XYZPoint vtx_position = lepton.vertex();
          
-         if(trk.pt()>1 &&
-            trk.hitPattern().numberOfValidHits()>=8 &&
-            trk.hitPattern().numberOfValidPixelHits()>=2 &&
-            trk.normalizedChi2()<5 &&
-            std::fabs(trk.dxy(vtx_position))<0.2 &&
-            std::fabs(trk.dz(vtx_position))<17
-            ) isgoodtrk = true;
+            if(trk.pt()>1 &&
+               trk.hitPattern().numberOfValidHits()>=8 &&
+               trk.hitPattern().numberOfValidPixelHits()>=2 &&
+               trk.normalizedChi2()<5 &&
+               std::fabs(trk.dxy(vtx_position))<0.2 &&
+               std::fabs(trk.dz(vtx_position))<17
+               ) isgoodtrk = true;
     
-         if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+            if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+         } catch(...){}
          
       }
 
