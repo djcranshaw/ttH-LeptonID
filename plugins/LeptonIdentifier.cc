@@ -45,7 +45,7 @@
 // class declaration
 //
 
-enum ID { nonIsolated, preselection, fakeable, mvabased, selection };
+enum ID { nonIsolated, preselection, fakeable, tight, mvabased, selection };
 
 class LeptonIdentifier : public edm::one::EDProducer<>
 {
@@ -98,8 +98,8 @@ private:
    edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
    edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesHZZMapToken_;
    edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesHZZMapToken_;
-   // edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesGPMapToken_;
-   // edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesGPMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesGPMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesGPMapToken_;
 
    reco::Vertex vertex_;
    pat::JetCollection jets_;
@@ -152,10 +152,10 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
    mvaCategoriesHZZMapToken_ =
       consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16HZZV1Categories"));
 
-   // mvaValuesGPMapToken_ =
-   //    consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Values"));
-   // mvaCategoriesGPMapToken_ =
-   //    consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Categories"));
+   mvaValuesGPMapToken_ =
+      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Values"));
+   mvaCategoriesGPMapToken_ =
+      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Categories"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
    // methods we access, which could be spun off, anyways.
@@ -256,7 +256,8 @@ bool isMediumMuon(const reco::Muon & recoMu, bool isHIPSafe)
 bool
 LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
-   double minMuonPt = id == preselection ? 5.0 : 15.0; // iMinPt;
+   //double minMuonPt = id == preselection ? 5.0 : 15.0; // iMinPt;
+   double minMuonPt = 5.;
    double maxMuonEta = 2.4;
 
    bool passesMuonBestTrackID = false;
@@ -294,7 +295,11 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
             mu.userFloat("nearestJetCsv") < medium_csv_wp and
             mu.userFloat("isMediumMuon");
             //isMediumMuon(mu, hip_safe_);
-         break;
+         break;    
+      case tight:            
+        passesIso = (mu.userFloat("miniIso") < 0.25);
+        passesID = passesPreselection;
+        break;      
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
          return false;
@@ -308,12 +313,14 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
+   //double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
+   double minElectronPt = 7.;
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
    bool passesIso = ele.userFloat("miniIso") < 0.4;
 
    bool passesMVA = false;
-   //double eleMvaGP = ele.userFloat("eleMvaId");
+   bool passesGPMVA = false;
+   double eleMvaGP = ele.userFloat("eleMvaId");
    double eleMvaHZZ = ele.userFloat("eleMvaIdHZZ");
    float scEta = ele.userFloat("superClusterEta");
 
@@ -336,6 +343,13 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    if (scEta<1.479) passesMVA = eleMvaHZZ > 0.0;
    else passesMVA = eleMvaHZZ > 0.7;
 
+
+    if (fabs(ele.eta())>1.479) passesGPMVA = eleMvaGP>0.357;
+    else
+    {
+        if (fabs(ele.eta())<0.8) passesGPMVA = eleMvaGP>0.837;
+        else  passesGPMVA = eleMvaGP>0.715;
+    }
 
 
    bool passGsfTrackID = false;
@@ -399,6 +413,10 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                     passesCuts and
                     ele.userFloat("leptonMVA") > 0.90 and
                     ele.userFloat("nearestJetCsv") < medium_csv_wp;
+         break;
+      case tight:
+         passesIso = ele.userFloat("miniIso") < 0.25;
+         passesID = passGsfTrackID and ele.userFloat("sip3D")<8 and ele.passConversionVeto() and passesGPMVA;
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
@@ -485,20 +503,21 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
          float dR = helper_.DeltaR(&matchedJet, &(dau_jet.p4()));
          
-         bool isgoodtrk = false;
-         const reco::Track trk = dau_jet.pseudoTrack();
-         const math::XYZPoint vtx_position = lepton.vertex();
-         
-         if(trk.pt()>1 &&
-            trk.hitPattern().numberOfValidHits()>=8 &&
-            trk.hitPattern().numberOfValidPixelHits()>=2 &&
-            trk.normalizedChi2()<5 &&
-            std::fabs(trk.dxy(vtx_position))<0.2 &&
-            std::fabs(trk.dz(vtx_position))<17
-            ) isgoodtrk = true;
-    
-         if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
-         
+         bool isgoodtrk = false;         
+         try {
+             const reco::Track trk = dau_jet.pseudoTrack();
+             const math::XYZPoint vtx_position = lepton.vertex();
+
+             if(trk.pt()>1 &&
+                trk.hitPattern().numberOfValidHits()>=8 &&
+                trk.hitPattern().numberOfValidPixelHits()>=2 &&
+                trk.normalizedChi2()<5 &&
+                std::fabs(trk.dxy(vtx_position))<0.2 &&
+                std::fabs(trk.dz(vtx_position))<17
+                ) isgoodtrk = true;
+
+             if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+         } catch(...){}
       }
 
 
@@ -524,7 +543,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
-
+   lepton.addUserFloat("idTight", passes(lepton, tight));
 
    if (  (abs(lepton.pdgId()) != 13 || lepton.userFloat("isMediumMuon")) && lepton.userFloat("leptonMVA") > 0.90 )
       {
@@ -568,8 +587,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    edm::Handle<edm::ValueMap<float>> mvaValuesHZZ;
    edm::Handle<edm::ValueMap<int>> mvaCategoriesHZZ;
 
-   //edm::Handle<edm::ValueMap<float>> mvaValuesGP;
-   //edm::Handle<edm::ValueMap<int>> mvaCategoriesGP;
+   edm::Handle<edm::ValueMap<float>> mvaValuesGP;
+   edm::Handle<edm::ValueMap<int>> mvaCategoriesGP;
 
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
@@ -580,10 +599,10 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    event.getByToken(vtx_token_, input_vtx);
    event.getByToken(mvaValuesHZZMapToken_, mvaValuesHZZ);
    event.getByToken(mvaCategoriesHZZMapToken_, mvaCategoriesHZZ);
-   //event.getByToken(mvaValuesGPMapToken_, mvaValuesGP);
-   //event.getByToken(mvaCategoriesGPMapToken_, mvaCategoriesGP);
+   event.getByToken(mvaValuesGPMapToken_, mvaValuesGP);
+   event.getByToken(mvaCategoriesGPMapToken_, mvaCategoriesGP);
 
-   //   const edm::ValueMap<float> ele_mvaValuesGP = (*mvaValuesGP.product());
+   const edm::ValueMap<float> ele_mvaValuesGP = (*mvaValuesGP.product());
    const edm::ValueMap<float> ele_mvaValuesHZZ = (*mvaValuesHZZ.product());
 
    helper_.SetRho(*rho);
@@ -663,8 +682,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       mu.addUserFloat("sip3D", fabs(mu.dB(pat::Muon::PV3D) / mu.edB(pat::Muon::PV3D)));
 
       mu.addUserFloat("idLooseLJ", helper_.isGoodMuon(mu, 15., 2.4, muonID::muonTightDL, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
-      mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 25., 2.1, muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
-
+      //mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 25., 2.1, muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
+      mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 10., 2.1, muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
       addCommonUserFloats(mu);
 
       mus->push_back(mu);
@@ -691,18 +710,21 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
-
-      ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS));
+      
+      ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfAllHits(reco::HitPattern::MISSING_INNER_HITS));
+      
       // leptonMVA vars
       ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt / ele.pt());
       ele.addUserFloat("neutralRelIso", ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
 
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
-      ele.addUserFloat("eleMvaId", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
+      //ele.addUserFloat("eleMvaId", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaId", ele_mvaValuesGP.get(ele_index_for_mva - 1));
       ele.addUserFloat("eleMvaIdHZZ", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
 
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
-      ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
+      //ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
+      ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 10., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("isMediumMuon", 0.);
 
       addCommonUserFloats(ele);
