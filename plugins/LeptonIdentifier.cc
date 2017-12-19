@@ -256,8 +256,8 @@ bool isMediumMuon(const reco::Muon & recoMu, bool isHIPSafe)
 bool
 LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
-   //double minMuonPt = id == preselection ? 5.0 : 15.0; // iMinPt;
-   double minMuonPt = 5.;
+   double minMuonPt = id == preselection ? 5.0 : 10.0; // iMinPt;
+   //double minMuonPt = 5.;
    double maxMuonEta = 2.4;
 
    bool passesMuonBestTrackID = false;
@@ -283,10 +283,14 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          break;
       case fakeable:
          if (mu.userFloat("leptonMVA") > 0.90)
+         {
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < medium_csv_wp;
+         }
          else
+         {
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < 0.3 and mu.userFloat("nearestJetPtRatio") > 0.5 and mu.segmentCompatibility() > 0.3;
-         passesIso = true;
+            passesIso = true;
+         }
          break;
       case mvabased:
          passesIso = true;
@@ -313,8 +317,8 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   //double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
-   double minElectronPt = 7.;
+   double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
+   //double minElectronPt = 7.;
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
    bool passesIso = ele.userFloat("miniIso") < 0.4;
 
@@ -401,12 +405,16 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case fakeable:
          if (ele.userFloat("leptonMVA") > 0.90)
+         {
             passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
+         }
          else
+         {
             passesJetCSV = ele.userFloat("nearestJetCsv") < 0.3 && ele.userFloat("nearestJetPtRatio") > 0.5;
-         passesID = passesPreselection and
+            passesID = passesPreselection and
                     passesCuts and
                     passesJetCSV;
+         }
          break;
       case mvabased:
          passesID = passesPreselection and
