@@ -13,5 +13,7 @@ ttHLeptons = cms.EDProducer(
     LooseCSVWP=cms.double(0.46),
     MediumCSVWP=cms.double(0.80),
     IsHIPSafe=cms.bool(False),
-    JECTag=cms.string('')
+    JECTag=cms.string(''),
+    mvaValuesMap=cms.InputTag('electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Values'),
+    mvaCategoriesMap=cms.InputTag('electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Categories')
 )

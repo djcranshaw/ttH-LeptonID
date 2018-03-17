@@ -96,10 +96,8 @@ private:
    edm::EDGetTokenT<pat::MuonCollection> mu_token_;
    edm::EDGetTokenT<pat::TauCollection> tau_token_;
    edm::EDGetTokenT<reco::VertexCollection> vtx_token_;
-   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesHZZMapToken_;
-   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesHZZMapToken_;
-   // edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesGPMapToken_;
-   // edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesGPMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<float>> mvaValuesMapToken_;
+   edm::EDGetTokenT<edm::ValueMap<int>> mvaCategoriesMapToken_;
 
    reco::Vertex vertex_;
    pat::JetCollection jets_;
@@ -147,15 +145,10 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
    vtx_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
 
-   mvaValuesHZZMapToken_ =
-      consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16HZZV1Values"));
-   mvaCategoriesHZZMapToken_ =
-      consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16HZZV1Categories"));
-
-   // mvaValuesGPMapToken_ =
-   //    consumes<edm::ValueMap<float>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Values"));
-   // mvaCategoriesGPMapToken_ =
-   //    consumes<edm::ValueMap<int>>(edm::InputTag("electronMVAValueMapProducer:ElectronMVAEstimatorRun2Spring16GeneralPurposeV1Categories"));
+   mvaValuesMapToken_ =
+      consumes<edm::ValueMap<float>>(config.getParameter<edm::InputTag>("mvaValuesMap"));
+   mvaCategoriesMapToken_ =
+      consumes<edm::ValueMap<int>>(config.getParameter<edm::InputTag>("mvaCategoriesMap"));
 
    // Who gives a FUCK about these parameters?  They are not used in the
    // methods we access, which could be spun off, anyways.
@@ -567,11 +560,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    edm::Handle<pat::TauCollection> input_tau;
    edm::Handle<reco::VertexCollection> input_vtx;
 
-   edm::Handle<edm::ValueMap<float>> mvaValuesHZZ;
-   edm::Handle<edm::ValueMap<int>> mvaCategoriesHZZ;
-
-   //edm::Handle<edm::ValueMap<float>> mvaValuesGP;
-   //edm::Handle<edm::ValueMap<int>> mvaCategoriesGP;
+   edm::Handle<edm::ValueMap<float>> mvaValues;
+   edm::Handle<edm::ValueMap<int>> mvaCategories;
 
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
@@ -580,13 +570,10 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    event.getByToken(mu_token_, input_mu);
    event.getByToken(tau_token_, input_tau);
    event.getByToken(vtx_token_, input_vtx);
-   event.getByToken(mvaValuesHZZMapToken_, mvaValuesHZZ);
-   event.getByToken(mvaCategoriesHZZMapToken_, mvaCategoriesHZZ);
-   //event.getByToken(mvaValuesGPMapToken_, mvaValuesGP);
-   //event.getByToken(mvaCategoriesGPMapToken_, mvaCategoriesGP);
+   event.getByToken(mvaValuesMapToken_, mvaValues);
+   event.getByToken(mvaCategoriesMapToken_, mvaCategories);
 
-   //   const edm::ValueMap<float> ele_mvaValuesGP = (*mvaValuesGP.product());
-   const edm::ValueMap<float> ele_mvaValuesHZZ = (*mvaValuesHZZ.product());
+   const edm::ValueMap<float> ele_mvaValues = (*mvaValues.product());
 
    helper_.SetRho(*rho);
    helper_.SetPackedCandidates(*packedCands);
@@ -610,7 +597,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    }
 
    //auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValuesGP, mvaCategoriesGP);
-   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValuesHZZ, mvaCategoriesHZZ);
+   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValues, mvaCategories);
 
    jets_ = helper_.GetSelectedJets(*input_jet, -666., 666., jetID::none, '-'); // already corrected (?)
 
@@ -700,8 +687,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("neutralRelIso", ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
 
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
-      ele.addUserFloat("eleMvaId", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
-      ele.addUserFloat("eleMvaIdHZZ", ele_mvaValuesHZZ.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaIdHZZ", ele_mvaValues.get(ele_index_for_mva - 1));
 
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
