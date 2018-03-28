@@ -33,12 +33,12 @@
 
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
-#include "MiniAOD/MiniAODHelper/interface/MiniAODHelper.h"
-
+#include "TLorentzVector.h"
 #include "TMVA/Reader.h"
 
 //
@@ -77,11 +77,8 @@ private:
 
    template<typename T> void addCommonUserFloats(T& lepton);
    template<typename T> void addIsolationFloats(T& lepton);
-   //template<typename T> void computeMiniIsoParameters(std::map<std::string,float>&,
-   //                                                   const T& lepton);
 
    // ----------member data ---------------------------
-   MiniAODHelper helper_;
 
    TMVA::Reader *mu_reader_;
    TMVA::Reader *ele_reader_;
@@ -102,7 +99,7 @@ private:
 
    edm::EDGetTokenT<double> rho_token_;
    edm::EDGetTokenT<pat::PackedCandidateCollection> packedCand_token_;
-   edm::EDGetTokenT<edm::View<pat::Electron>> ele_token_;
+   edm::EDGetTokenT<pat::ElectronCollection> ele_token_;
    edm::EDGetTokenT<pat::JetCollection> jet_token_;
    edm::EDGetTokenT<pat::MuonCollection> mu_token_;
    edm::EDGetTokenT<pat::TauCollection> tau_token_;
@@ -150,7 +147,7 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
 
    rho_token_ = consumes<double>(config.getParameter<edm::InputTag>("rhoParam"));
    packedCand_token_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("packedPFCandidates"));
-   ele_token_ = consumes<edm::View<pat::Electron>>(config.getParameter<edm::InputTag>("electrons"));
+   ele_token_ = consumes<pat::ElectronCollection>(config.getParameter<edm::InputTag>("electrons"));
    jet_token_ = consumes<pat::JetCollection>(config.getParameter<edm::InputTag>("jets"));
    mu_token_ = consumes<pat::MuonCollection>(config.getParameter<edm::InputTag>("muons"));
    tau_token_ = consumes<pat::TauCollection>(config.getParameter<edm::InputTag>("taus"));
@@ -160,10 +157,6 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
       consumes<edm::ValueMap<float>>(config.getParameter<edm::InputTag>("mvaValuesMap"));
    mvaCategoriesMapToken_ =
       consumes<edm::ValueMap<int>>(config.getParameter<edm::InputTag>("mvaCategoriesMap"));
-
-   // Who gives a FUCK about these parameters?  They are not used in the
-   // methods we access, which could be spun off, anyways.
-   helper_.SetUp("2015_74x", 666, analysisType::LJ, false);
 
    mu_reader_ = new TMVA::Reader("!Color:!Silent");
    ele_reader_ = new TMVA::Reader("!Color:!Silent");
@@ -462,7 +455,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    double dR = 666.;
 
    for (const auto &j : jets_) {
-      double newDR = helper_.DeltaR(&j, &lepton);
+      double newDR = reco::deltaR(j.eta(), j.phi(), lepton.eta(), lepton.phi());
       if (newDR < dR and newDR < .4) {
          dR = newDR;
          matchedJet = j;
@@ -476,7 +469,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       }
    }
 
-   lepton.addUserFloat("nearestJetDr", min(dR, 0.5)); // no longer used in MVA
+   lepton.addUserFloat("nearestJetDr", std::min(dR, 0.5)); // no longer used in MVA
 
    float njet_csv = 0;
    float njet_pt_ratio = 1.;
@@ -492,7 +485,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
 
          const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
-         float dR = helper_.DeltaR(&matchedJet, &(dau_jet.p4()));
+         float dR = reco::deltaR(matchedJet.eta(),matchedJet.phi(),
+                                 dau_jet.p4().eta(), dau_jet.p4().phi());
          
          bool isgoodtrk = false;
          try {
@@ -559,30 +553,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       lepton.addUserFloat("idMVABased", -666.);
    }
 }
-/*
-template<typename T> void
-LeptonIdentifier::computeMiniIsoParameters(std::map<std::string, float>& params,
-                                           const T& lepton)
-{  // dR = 0.3 
-   params["miniAbsIsoCharged"] = lepton.miniPFIsolation().chargedHadronIso();
-   params["miniAbsIsoNeutral"] = lepton.miniPFIsolation().neutralHadronIso() +
-      lepton.miniPFIsolation().photonIso();
-   
-   // PU correction
-   params["effArea"] = effectiveArea(lepton);
-   params["miniIsoR"] = std::max(std::min(10.0/lepton.pt(), 0.2), 0.05);
 
-   assert(lepton.hasUserFloat("rho"));
-   
-   float PUCorrection =
-      lepton.userFloat("rho")*params["effArea"]*(params["miniIsoR"]/0.3)*(params["miniIsoR"]/0.3);
-   params["miniAbsIsoNeutralcorr"] =
-      std::max(float(0.), params["miniAbsIsoNeutral"]-PUCorrection);
-   
-   params["miniRelIso"] =
-      (params["miniAbsIsoCharged"] + params["miniAbsIsoNeutralcorr"])/lepton.pt();
-}
-*/
 template<typename T> void
 LeptonIdentifier::addIsolationFloats(T& lepton)
 {
@@ -712,7 +683,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
    edm::Handle<double> rho;
    edm::Handle<pat::PackedCandidateCollection> packedCands;
-   edm::Handle<edm::View<pat::Electron>> input_ele_raw;
+   edm::Handle<pat::ElectronCollection> input_ele;
    edm::Handle<pat::JetCollection> input_jet;
    edm::Handle<pat::MuonCollection> input_mu;
    edm::Handle<pat::TauCollection> input_tau;
@@ -723,7 +694,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
    event.getByToken(rho_token_, rho);
    event.getByToken(packedCand_token_, packedCands);
-   event.getByToken(ele_token_, input_ele_raw);
+   //event.getByToken(ele_token_, input_ele_raw);
+   event.getByToken(ele_token_, input_ele);
    event.getByToken(jet_token_, input_jet);
    event.getByToken(mu_token_, input_mu);
    event.getByToken(tau_token_, input_tau);
@@ -733,14 +705,10 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
    const edm::ValueMap<float> ele_mvaValues = (*mvaValues.product());
 
-   helper_.SetRho(*rho);
-   helper_.SetPackedCandidates(*packedCands);
-
    // determine primary vertex
    bool valid = false;
    for (const auto &v : *input_vtx) {
       if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
-         helper_.SetVertex(v);
          vertex_ = v;
          valid = true;
          break;
@@ -754,10 +722,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       return;
    }
 
-   //auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValuesGP, mvaCategoriesGP);
-   auto input_ele = helper_.GetElectronsWithMVAid(input_ele_raw, mvaValues, mvaCategories);
-
-   jets_ = helper_.GetSelectedJets(*input_jet, -666., 666., jetID::none, '-'); // already corrected (?)
+   jets_ = *input_jet;
 
    for (auto mu : *input_mu) {
       if (mu.pt() < mu_minpt_)
@@ -793,28 +758,10 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       mu.addUserFloat("rho", *rho);
 
       addIsolationFloats(mu);
-      
-      //std::map<std::string, float> miniIso_calculation_params;
-      //computeMiniIsoParameters(miniIso_calculation_params, mu);
 
-      mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
-      //mu.addUserFloat("relIso04", computeRelIso04(mu));
-      //mu.addUserFloat("miniIso", miniIso_calculation_params["miniRelIso"]);
-      //mu.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
-      //mu.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
-      //mu.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
-      //mu.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      //mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
       mu.addUserFloat("localChiSq", mu.combinedQuality().chi2LocalPosition);
-      mu.addUserFloat("trackKink", mu.combinedQuality().trkKink);
-      // lepMVA input vars
-      mu.addUserFloat("chargedRelIso", mu.pfIsolationR03().sumChargedHadronPt / mu.pt());
-      mu.addUserFloat("neutralRelIso", mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
-      
+      mu.addUserFloat("trackKink", mu.combinedQuality().trkKink);     
       mu.addUserFloat("sip3D", fabs(mu.dB(pat::Muon::PV3D) / mu.edB(pat::Muon::PV3D)));
-
-      mu.addUserFloat("idLooseLJ", helper_.isGoodMuon(mu, 15., 2.4, muonID::muonTightDL, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
-      mu.addUserFloat("idTightLJ", helper_.isGoodMuon(mu, 25., 2.1, muonID::muonTight, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
 
       addCommonUserFloats(mu);
 
@@ -822,40 +769,23 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    }
 
    int ele_index_for_mva = 0;
-   for (auto ele : input_ele) {
+   for (auto ele : *input_ele) {
       ele_index_for_mva++;
+      
       if (ele.pt() < ele_minpt_)
          continue;
 
       ele.addUserFloat("rho", *rho);
 
       addIsolationFloats(ele);
-      //std::map<std::string, float> miniIso_calculation_params;
-      //computeMiniIsoParameters(miniIso_calculation_params, ele);
 
       ele.addUserFloat("superClusterEta", abs(ele.superCluster()->position().eta()));
-      ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
-      //ele.addUserFloat("relIso04", computeRelIso04(ele));
-      //ele.addUserFloat("miniIso", miniIso_calculation_params["miniRelIso"]);
-      //ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
-      //ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
-      //ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
-      //ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      //ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
-
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
 
       ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfAllHits(reco::HitPattern::MISSING_INNER_HITS));
-      // leptonMVA vars
-      ele.addUserFloat("chargedRelIso", ele.pfIsolationVariables().sumChargedHadronPt / ele.pt());
-      ele.addUserFloat("neutralRelIso", ele.userFloat("relIso") - ele.userFloat("chargedRelIso"));
-
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
       ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
-
-      ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
-      ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("isMediumMuon", 0.);
 
       addCommonUserFloats(ele);
