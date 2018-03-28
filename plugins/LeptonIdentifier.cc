@@ -67,7 +67,18 @@ private:
    float mva(const pat::Muon &mu);
    float mva(const pat::Electron &ele);
 
+   float effectiveArea(const pat::Muon&);
+   float effectiveArea(const pat::Electron&);
+   float effectiveAreaDR04(const pat::Muon&);
+   float effectiveAreaDR04(const pat::Electron&);
+
+   float computeRelIso04(const pat::Muon&);
+   float computeRelIso04(const pat::Electron&);
+
    template<typename T> void addCommonUserFloats(T& lepton);
+   template<typename T> void addIsolationFloats(T& lepton);
+   //template<typename T> void computeMiniIsoParameters(std::map<std::string,float>&,
+   //                                                   const T& lepton);
 
    // ----------member data ---------------------------
    MiniAODHelper helper_;
@@ -166,14 +177,15 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
       m->AddVariable("LepGood_miniRelIsoCharged", &varchRelIso);
       m->AddVariable("LepGood_miniRelIsoNeutral", &varneuRelIso);
       m->AddVariable("LepGood_jetPtRelv2", &varjetPtRel_in);
-      m->AddVariable("LepGood_jetPtRatio := min(LepGood_jetPtRatiov2,1.5)", &varjetPtRatio_in);
       m->AddVariable("LepGood_jetBTagCSV := max(LepGood_jetBTagCSV,0)", &varjetBTagCSV_in);
+      //m->AddVariable("LepGood_jetPtRatio := min(LepGood_jetPtRatiov2,1.5)", &varjetPtRatio_in);
+      m->AddVariable("LepGood_jetPtRatiov2 := (LepGood_jetBTagCSV>-5)*min(LepGood_jetPtRatiov2,1.5)+(LepGood_jetBTagCSV<-5)/(1+LepGood_relIso04)", &varjetPtRatio_in);
       m->AddVariable("LepGood_sip3d", &varsip3d);
       m->AddVariable("LepGood_dxy := log(abs(LepGood_dxy))", &vardxy);
       m->AddVariable("LepGood_dz := log(abs(LepGood_dz))", &vardz);
    }
 
-   ele_reader_->AddVariable("LepGood_mvaIdSpring16HZZ", &varmvaId);
+   ele_reader_->AddVariable("LepGood_mvaIdFall17noIso", &varmvaId);
    mu_reader_->AddVariable("LepGood_segmentCompatibility", &varSegCompat);
 
    const std::string base = std::string(getenv("CMSSW_BASE")) + "/src/ttH/LeptonID/data";
@@ -200,7 +212,9 @@ LeptonIdentifier::mva(const pat::Muon &mu)
    varchRelIso = mu.userFloat("miniAbsIsoCharged") / mu.pt();
    varneuRelIso = mu.userFloat("miniAbsIsoNeutralcorr") / mu.pt();
    varjetPtRel_in = mu.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = std::min(mu.userFloat("nearestJetPtRatio"), 1.5f);
+   varjetPtRatio_in = (mu.userFloat("nearestJetCsv") > -5.) ?
+      std::min(mu.userFloat("nearestJetPtRatio"), 1.5f) :
+      (1./(1.+mu.userFloat("relIso04")));
    varjetBTagCSV_in = std::max(mu.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = mu.userFloat("nearestJetNDauCharged");
    varsip3d = mu.userFloat("sip3D");
@@ -219,13 +233,15 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varchRelIso = ele.userFloat("miniAbsIsoCharged") / ele.pt();
    varneuRelIso = ele.userFloat("miniAbsIsoNeutralcorr") / ele.pt();
    varjetPtRel_in = ele.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = std::min(ele.userFloat("nearestJetPtRatio"), 1.5f);
+   varjetPtRatio_in = (ele.userFloat("nearestJetCsv") > -5.) ?
+      std::min(ele.userFloat("nearestJetPtRatio"), 1.5f) :
+      (1./(1.+ele.userFloat("relIso04")));
    varjetBTagCSV_in = std::max(ele.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = ele.userFloat("nearestJetNDauCharged");
    varsip3d = ele.userFloat("sip3D");
    vardxy = log(fabs(ele.userFloat("dxy")));
    vardz = log(fabs(ele.userFloat("dz")));
-   varmvaId = ele.userFloat("eleMvaIdHZZ");
+   varmvaId = ele.userFloat("eleMvaId");
 
    return ele_reader_->EvaluateMVA("BDTG method");
 }
@@ -258,7 +274,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
    }
 
    bool passesKinematics = (mu.pt() > minMuonPt) and (fabs(mu.eta()) < maxMuonEta);
-   bool passesIso = (mu.userFloat("miniIso") < 0.4);
+   bool passesIso = (mu.userFloat("miniRelIso") < 0.4);
    bool passesPreselection = mu.isLooseMuon() && passesMuonBestTrackID;
 
    bool passesID = false;
@@ -303,11 +319,10 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
    double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
-   bool passesIso = ele.userFloat("miniIso") < 0.4;
+   bool passesIso = ele.userFloat("miniRelIso") < 0.4;
 
    bool passesMVA = false;
-   //double eleMvaGP = ele.userFloat("eleMvaId");
-   double eleMvaHZZ = ele.userFloat("eleMvaIdHZZ");
+   double eleMva = ele.userFloat("eleMvaId");
    float scEta = ele.userFloat("superClusterEta");
 
    // VLooseIdEmu WP
@@ -326,8 +341,8 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
    //    passesMVA = eleMvaGP > _high[(scEta>=0.8)+(scEta>=1.479)];
    // }
    
-   if (scEta<1.479) passesMVA = eleMvaHZZ > 0.0;
-   else passesMVA = eleMvaHZZ > 0.7;
+   if (scEta<1.479) passesMVA = eleMva > 0.0;
+   else passesMVA = eleMva > 0.7;
 
 
 
@@ -469,8 +484,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    float njet_ndau_charged = 0.;
 
    if (jets_.size() > 0 and dR < .4) {
-      //njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-      njet_csv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
+      njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
+      //njet_csv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
       if (njet_csv < 0)
          njet_csv = -10.;
 
@@ -543,6 +558,148 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       lepton.addUserFloat("idFakeable", -666.);
       lepton.addUserFloat("idMVABased", -666.);
    }
+}
+/*
+template<typename T> void
+LeptonIdentifier::computeMiniIsoParameters(std::map<std::string, float>& params,
+                                           const T& lepton)
+{  // dR = 0.3 
+   params["miniAbsIsoCharged"] = lepton.miniPFIsolation().chargedHadronIso();
+   params["miniAbsIsoNeutral"] = lepton.miniPFIsolation().neutralHadronIso() +
+      lepton.miniPFIsolation().photonIso();
+   
+   // PU correction
+   params["effArea"] = effectiveArea(lepton);
+   params["miniIsoR"] = std::max(std::min(10.0/lepton.pt(), 0.2), 0.05);
+
+   assert(lepton.hasUserFloat("rho"));
+   
+   float PUCorrection =
+      lepton.userFloat("rho")*params["effArea"]*(params["miniIsoR"]/0.3)*(params["miniIsoR"]/0.3);
+   params["miniAbsIsoNeutralcorr"] =
+      std::max(float(0.), params["miniAbsIsoNeutral"]-PUCorrection);
+   
+   params["miniRelIso"] =
+      (params["miniAbsIsoCharged"] + params["miniAbsIsoNeutralcorr"])/lepton.pt();
+}
+*/
+template<typename T> void
+LeptonIdentifier::addIsolationFloats(T& lepton)
+{
+   // dR = 0.3
+   lepton.addUserFloat("miniAbsIsoCharged",
+                       lepton.miniPFIsolation().chargedHadronIso());  
+   lepton.addUserFloat("miniAbsIsoNeutral",
+                       lepton.miniPFIsolation().neutralHadronIso() +
+                       lepton.miniPFIsolation().photonIso());
+   
+   // PU correction
+   lepton.addUserFloat("miniIsoR", std::max(std::min(10.0/lepton.pt(), 0.2), 0.05) ); 
+   lepton.addUserFloat("effArea", effectiveArea(lepton));
+   assert(lepton.hasUserFloat("rho"));
+   float PUCorrection =
+      lepton.userFloat("rho") * lepton.userFloat("effArea") * 
+      (lepton.userFloat("miniIsoR")/0.3) * (lepton.userFloat("miniIsoR")/0.3);
+   
+   lepton.addUserFloat("miniAbsIsoNeutralcorr",
+                       std::max(lepton.userFloat("miniAbsIsoNeutral") - 
+                                PUCorrection, 0.f));
+   lepton.addUserFloat("miniRelIso", (lepton.userFloat("miniAbsIsoCharged")+
+                                      lepton.userFloat("miniAbsIsoNeutralcorr")
+                                      ) / lepton.pt());
+
+
+   lepton.addUserFloat("relIso04", computeRelIso04(lepton));
+}
+
+float LeptonIdentifier::computeRelIso04(const pat::Muon& mu)
+{
+   float absIso04Charged = mu.pfIsolationR04().sumChargedHadronPt;
+   float absIso04Neutral =
+      mu.pfIsolationR04().sumNeutralHadronEt + mu.pfIsolationR04().sumPhotonEt;
+
+   // deltaBeta PU correction for muon
+   float absIso04NeutralCorr =
+      std::max(absIso04Neutral - mu.pfIsolationR04().sumPUPt/2, 0.f);
+
+   return (absIso04Charged + absIso04NeutralCorr) / mu.pt();
+}
+
+float LeptonIdentifier::computeRelIso04(const pat::Electron& ele)
+{
+   // These are for dR = 0.3
+   //float absIso04Charged = ele.pfIsolationVariables().sumChargedHadronPt;
+   //float absIso04Neutral = ele.pfIsolationVariables().sumNeutralHadronEt +
+   //   ele.pfIsolationVariables().sumPhotonEt;
+
+   // dR = 0.4
+   float absIso04Charged = ele.chargedHadronIso();
+   float absIso04Neutral = ele.neutralHadronIso() + ele.photonIso();
+
+   // effective area PU correction for electron
+   assert(ele.hasUserFloat("rho"));  
+   float absIso04NeutralCorr =
+      std::max(absIso04Neutral - ele.userFloat("rho")*effectiveAreaDR04(ele), 0.f);
+
+   return (absIso04Charged + absIso04NeutralCorr) / ele.pt();
+}
+
+float LeptonIdentifier::effectiveArea(const pat::Muon& mu)
+{
+   float eta = mu.eta();
+   
+   // Fall17 EA dR=0.3
+   // have to be used with rho = fixedGridRhoFastjetAll
+   //assert(fabs(eta) <= 2.5);
+   
+   if (fabs(eta) < 0.8)
+      return 0.0566;
+   else if (fabs(eta) < 1.3)
+      return 0.0562;
+   else if (fabs(eta) < 2.0)
+      return 0.0363;
+   else if (fabs(eta) < 2.2)
+      return 0.0119;
+   else if (fabs(eta) <= 2.5)
+      return 0.0064;
+   else
+      return 0.;
+}
+
+float LeptonIdentifier::effectiveAreaDR04(const pat::Muon& mu)
+{
+   return effectiveArea(mu) * 16./9.;
+}
+
+float LeptonIdentifier::effectiveArea(const pat::Electron& ele)
+{
+   float eta = ele.eta();
+   
+   // Fall17 EA dR=0.3
+   // have to be used with rho = fixedGridRhoFastjetAll
+   //assert(fabs(eta) <= 2.5);
+
+   if (fabs(eta) < 1.0)
+      return 0.1566;
+   else if (fabs(eta) < 1.479)
+      return 0.1626;
+   else if (fabs(eta) < 2.0)
+      return 0.1073;
+   else if (fabs(eta) < 2.2)
+      return 0.0854;
+   else if (fabs(eta) < 2.3)
+      return 0.1051;
+   else if (fabs(eta) < 2.4)
+      return 0.1204;
+   else if (fabs(eta) <= 2.5)
+      return 0.1524;
+   else
+      return 0.;
+}
+
+float LeptonIdentifier::effectiveAreaDR04(const pat::Electron& ele)
+{
+   return effectiveArea(ele) * 16./9.;
 }
 
 // ------------ method called to produce the data  ------------
@@ -633,23 +790,27 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       }
 
       mu.addUserFloat("isMediumMuon", isMediumMuon(mu, hip_safe_));
-    
-      std::map<std::string, double> miniIso_calculation_params;
+      mu.addUserFloat("rho", *rho);
+
+      addIsolationFloats(mu);
+      
+      //std::map<std::string, float> miniIso_calculation_params;
+      //computeMiniIsoParameters(miniIso_calculation_params, mu);
 
       mu.addUserFloat("relIso", helper_.GetMuonRelIso(mu, coneSize::R03, corrType::rhoEA));
-      mu.addUserFloat("miniIso", helper_.GetMuonRelIso(mu, coneSize::miniIso, corrType::rhoEA, &miniIso_calculation_params));
-      mu.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
-      mu.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
-      mu.addUserFloat("rho", miniIso_calculation_params["rho"]);
-      mu.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
-      mu.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
+      //mu.addUserFloat("relIso04", computeRelIso04(mu));
+      //mu.addUserFloat("miniIso", miniIso_calculation_params["miniRelIso"]);
+      //mu.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
+      //mu.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
+      //mu.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
+      //mu.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
+      //mu.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
       mu.addUserFloat("localChiSq", mu.combinedQuality().chi2LocalPosition);
       mu.addUserFloat("trackKink", mu.combinedQuality().trkKink);
       // lepMVA input vars
       mu.addUserFloat("chargedRelIso", mu.pfIsolationR03().sumChargedHadronPt / mu.pt());
       mu.addUserFloat("neutralRelIso", mu.userFloat("relIso") - mu.userFloat("chargedRelIso"));
-
+      
       mu.addUserFloat("sip3D", fabs(mu.dB(pat::Muon::PV3D) / mu.edB(pat::Muon::PV3D)));
 
       mu.addUserFloat("idLooseLJ", helper_.isGoodMuon(mu, 15., 2.4, muonID::muonTightDL, coneSize::R04, corrType::deltaBeta) ? 1. : -666.);
@@ -666,18 +827,21 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       if (ele.pt() < ele_minpt_)
          continue;
 
-      std::map<std::string, double> miniIso_calculation_params;
+      ele.addUserFloat("rho", *rho);
+
+      addIsolationFloats(ele);
+      //std::map<std::string, float> miniIso_calculation_params;
+      //computeMiniIsoParameters(miniIso_calculation_params, ele);
 
       ele.addUserFloat("superClusterEta", abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("relIso", helper_.GetElectronRelIso(ele, coneSize::R03, corrType::rhoEA));
-      ele.addUserFloat("miniIso",
-                       helper_.GetElectronRelIso(ele, coneSize::miniIso, corrType::rhoEA, effAreaType::spring15, &miniIso_calculation_params));
-      ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
-      ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
-      ele.addUserFloat("rho", miniIso_calculation_params["rho"]);
-      ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
-      ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
-      ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
+      //ele.addUserFloat("relIso04", computeRelIso04(ele));
+      //ele.addUserFloat("miniIso", miniIso_calculation_params["miniRelIso"]);
+      //ele.addUserFloat("miniAbsIsoCharged", miniIso_calculation_params["miniAbsIsoCharged"]);
+      //ele.addUserFloat("miniAbsIsoNeutral", miniIso_calculation_params["miniAbsIsoNeutral"]);
+      //ele.addUserFloat("effArea", miniIso_calculation_params["effArea"]);
+      //ele.addUserFloat("miniIsoR", miniIso_calculation_params["miniIsoR"]);
+      //ele.addUserFloat("miniAbsIsoNeutralcorr", miniIso_calculation_params["miniAbsIsoNeutralcorr"]);
 
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
@@ -689,7 +853,6 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
       ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
-      ele.addUserFloat("eleMvaIdHZZ", ele_mvaValues.get(ele_index_for_mva - 1));
 
       ele.addUserFloat("idLooseLJ", helper_.isGoodElectron(ele, 15., 2.4, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
       ele.addUserFloat("idTightLJ", helper_.isGoodElectron(ele, 30., 2.1, electronID::electronEndOf15MVA80iso0p15) ? 1. : -666.);
