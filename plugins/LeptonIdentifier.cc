@@ -261,7 +261,9 @@ bool isMediumMuon(const reco::Muon & recoMu, bool isHIPSafe)
 bool
 LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 {
-   double minMuonPt = id == preselection ? 5.0 : 15.0; // iMinPt;
+   //double minMuonPt = id == preselection ? 5.0 : 15.0; // iMinPt;
+   double minMuonPt = 5.0;
+   double minMuonConePt = 10.;
    double maxMuonEta = 2.4;
 
    bool passesMuonBestTrackID = false;
@@ -275,12 +277,6 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 
    bool passesID = false;
 
-   float corrected_pt = mu.pt();
-   if (mu.userFloat("leptonMVA") < 0.90) {
-      corrected_pt = 0.90 * corrected_pt / mu.userFloat("nearestJetPtRatio");
-      //passesKinematics = (corrected_pt > minMuonPt) and (fabs(mu.eta()) < 2.5);
-   }
-
    switch (id) {
       case preselection:
          passesID = passesPreselection;
@@ -290,15 +286,19 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < medium_csv_wp;
          else
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < 0.3 and mu.userFloat("nearestJetPtRatio") > 0.5 and mu.segmentCompatibility() > 0.3;
-         passesIso = true;
+         //passesIso = true;
+         passesKinematics =
+            passesKinematics and (mu.userFloat("correctedPt") > minMuonConePt);
          break;
       case mvabased:
-         passesIso = true;
+         //passesIso = true;
          passesID = passesPreselection and
-            mu.userFloat("leptonMVA") > 0.90 and
-            mu.userFloat("nearestJetCsv") < medium_csv_wp and
+            (mu.userFloat("leptonMVA") > 0.90) and
+            (mu.userFloat("nearestJetCsv") < medium_csv_wp) and
             mu.userFloat("isMediumMuon");
             //isMediumMuon(mu, hip_safe_);
+         passesKinematics =
+            passesKinematics and (mu.userFloat("correctedPt") > minMuonConePt);
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for muons!";
@@ -313,44 +313,38 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
 bool
 LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 {
-   double minElectronPt = id == preselection ? 7.0 : 15.0; // iMinPt;
+   double minElectronPt = 7.0;
+   double minElectronConePt = 10.;
+   
    bool passesKinematics = (ele.pt() > minElectronPt) and (fabs(ele.eta()) < 2.5);
    bool passesIso = ele.userFloat("miniRelIso") < 0.4;
-
-   bool passesMVA = false;
-   double eleMva = ele.userFloat("eleMvaId");
-   float scEta = ele.userFloat("superClusterEta");
-
-   // VLooseIdEmu WP
-   // c.f. https://github.com/CERN-PH-CMG/cmg-cmssw/blob/a76bc9fb439b6238af56649961b3952dbef95626/PhysicsTools/Heppy/python/physicsobjects/Electron.py#L361
-   // double _vlow[3] = {-0.30,-0.46,-0.63};
-   // double _low[3] = {-0.86,-0.85,-0.81};
-   // double _high[3] = {0.,0.,0.7};
-
-   // if (ele.pt() <= 10) {
-   //    // use HZZ MVA if electron pt less than 10 GeV
-   //    passesMVA = eleMvaHZZ > _high[(scEta>=0.8)+(scEta>=1.479)];
-      
-   // }
-   // else {
-   //    // _low below 15 GeV, _high above 25 GeV, interpolation in between
-   //    passesMVA = eleMvaGP > _high[(scEta>=0.8)+(scEta>=1.479)];
-   // }
    
-   if (scEta<1.479) passesMVA = eleMva > 0.0;
-   else passesMVA = eleMva > 0.7;
-
-
-
    bool passGsfTrackID = false;
    if (ele.gsfTrack().isAvailable())
       passGsfTrackID = fabs(ele.userFloat("dxy")) < 0.05 and fabs(ele.userFloat("dz")) < 0.1 and ele.userFloat("numMissingHits") <= 1;
 
-   float corrected_pt = ele.pt();
-   if (ele.userFloat("leptonMVA") < 0.90) {
-      corrected_pt = 0.90 * corrected_pt / ele.userFloat("nearestJetPtRatio");
-      //passesKinematics = (corrected_pt > minElectronPt) and (fabs(ele.eta()) < 2.5);
+   float scEta = fabs(ele.userFloat("superClusterEta"));
+   double eleMva = ele.userFloat("eleMvaId");
+   // Loose Fall17noIso
+   bool passesMvaWP = false;
+   if (ele.pt() <= 10.) {
+      if (scEta < 0.8)
+         passesMvaWP = eleMva > -0.13285867293779202;
+      else if (scEta < 1.479)
+         passesMvaWP = eleMva > -0.31765300958836074;
+      else
+         passesMvaWP = eleMva > -0.0799205914718861;
    }
+   else {
+      if (scEta < 0.8)
+         passesMvaWP = eleMva > -0.856871961305474;
+      else if (scEta < 1.479)
+         passesMvaWP = eleMva > -0.8107642141584835;
+      else
+         passesMvaWP = eleMva > -0.7179265933023059;
+   }
+
+   bool passesPreselection = passGsfTrackID and ele.userFloat("sip3D") < 8 and passesMvaWP;
 
    bool passesCuts = false;
    if (fabs(ele.eta()) < 0.8) {
@@ -378,12 +372,9 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() < 0.005;
    }
 
-   bool passesPreselection = passesKinematics and passesIso and passesMVA and passGsfTrackID and ele.userFloat("sip3D") < 8;
 
    bool passesID = false;
    bool passesJetCSV = false;
-
-   bool passesObjectSelection = true;
 
    switch (id) {
       case preselection:
@@ -393,16 +384,23 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          if (ele.userFloat("leptonMVA") > 0.90)
             passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
          else
-            passesJetCSV = ele.userFloat("nearestJetCsv") < 0.3 && ele.userFloat("nearestJetPtRatio") > 0.5;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.5;
+         
          passesID = passesPreselection and
                     passesCuts and
-                    passesJetCSV;
+                    passesJetCSV and
+                    ele.userFloat("numMissingHits") == 0;
+         passesKinematics = passesKinematics and
+                            (ele.userFloat("correctedPt") > minElectronConePt);
          break;
       case mvabased:
          passesID = passesPreselection and
                     passesCuts and
                     ele.userFloat("leptonMVA") > 0.90 and
-                    ele.userFloat("nearestJetCsv") < medium_csv_wp;
+                    ele.userFloat("nearestJetCsv") < medium_csv_wp and
+                    ele.userFloat("numMissingHits") == 0;
+         passesKinematics = passesKinematics and
+                            (ele.userFloat("correctedPt") > minElectronConePt);
          break;
       case nonIsolated:
          edm::LogError("LeptonID") << "Invalid ID 'nonIsolated' for electrons!";
@@ -412,7 +410,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
    }
 
-   return (passesKinematics && passesIso && passesID && passesObjectSelection);
+   return (passesKinematics && passesIso && passesID);
 }
 
 bool
@@ -531,8 +529,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
    auto mva_value = mva(lepton);
    lepton.addUserFloat("leptonMVA", mva_value);
-   lepton.addUserFloat("idPreselection", passes(lepton, preselection));
-
 
    if (  (abs(lepton.pdgId()) != 13 || lepton.userFloat("isMediumMuon")) && lepton.userFloat("leptonMVA") > 0.90 )
       {
@@ -542,18 +538,15 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       {
          lepton.addUserFloat("correctedPt", .90 * lepton.pt() / njet_pt_ratio);
       }
-   
- 
-
-
-
+      
+   lepton.addUserFloat("idPreselection", passes(lepton, preselection));
 
    if (lepton.userFloat("idPreselection") > .5) {
       lepton.addUserFloat("idFakeable", passes(lepton, fakeable));
       lepton.addUserFloat("idMVABased", passes(lepton, mvabased));
    } else {
-      lepton.addUserFloat("idFakeable", -666.);
-      lepton.addUserFloat("idMVABased", -666.);
+      lepton.addUserFloat("idFakeable", 0.);
+      lepton.addUserFloat("idMVABased", 0.);
    }
 }
 
