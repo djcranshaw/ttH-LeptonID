@@ -245,6 +245,9 @@ LeptonIdentifier::mva(const pat::Electron &ele)
 // https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2#Short_Term_Medium_Muon_Definitio
 bool isMediumMuon(const reco::Muon & recoMu, bool isHIPSafe)
 {
+   std::cout << "Method deprecated!! Use isMediumMuon() directly from miniAOD instead." << std::endl;
+   assert(0);
+   
    bool goodGlob = recoMu.isGlobalMuon() &&
       recoMu.globalTrack()->normalizedChi2() < 3 &&
       recoMu.combinedQuality().chi2LocalPosition < 12 &&
@@ -754,7 +757,7 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
          mu.addUserFloat("numValidMuonHits", -666.);
       }
 
-      mu.addUserFloat("isMediumMuon", isMediumMuon(mu, hip_safe_));
+      mu.addUserFloat("isMediumMuon", mu.isMediumMuon());//isMediumMuon(mu, hip_safe_));
       mu.addUserFloat("rho", *rho);
 
       addIsolationFloats(mu);
