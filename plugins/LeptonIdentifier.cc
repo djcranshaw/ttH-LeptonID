@@ -431,11 +431,13 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          break;
       case preselection:
-         passesIso = (tau.tauID("byLooseIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         //passesIso = (tau.tauID("byLooseIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         passesIso = (tau.tauID("byLooseIsolationMVArun2017v2DBoldDMdR0p3wLT2017") > 0.5);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          break;
       case selection:
-         passesIso = (tau.tauID("byMediumIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         //passesIso = (tau.tauID("byMediumIsolationMVArun2v1DBdR03oldDMwLT") > 0.5);
+         passesIso = (tau.tauID("byMediumIsolationMVArun2017v2DBoldDMdR0p3wLT2017") > 0.5);
          passesID = (tau.tauID("decayModeFinding") > 0.5) && passesPVassoc;
          break;
       default:
