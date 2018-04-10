@@ -494,7 +494,8 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          bool isgoodtrk = false;
          try {
             const reco::Track trk = dau_jet.pseudoTrack();
-            const math::XYZPoint vtx_position = lepton.vertex();
+            //const math::XYZPoint vtx_position = lepton.vertex();
+            const auto vtx_position = vertex_.position();
          
             if(trk.pt()>1 &&
                trk.hitPattern().numberOfValidHits()>=8 &&
