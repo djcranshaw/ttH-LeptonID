@@ -77,6 +77,8 @@ private:
 
    template<typename T> void addCommonUserFloats(T& lepton);
    template<typename T> void addIsolationFloats(T& lepton);
+   template<class C1, class C2>
+   bool matchByCommonSourceCandidatePtr(const C1 & c1, const C2 & c2);
 
    // ----------member data ---------------------------
 
@@ -447,6 +449,17 @@ LeptonIdentifier::passes(const pat::Tau &tau, ID id)
    return (passesKinematics && passesIso && passesID);
 }
 
+template<class C1, class C2> bool
+LeptonIdentifier::matchByCommonSourceCandidatePtr(const C1 & c1, const C2 & c2) {
+    for(unsigned int i1 = 0 ; i1 < c1.numberOfSourceCandidatePtrs();i1++){
+        auto  c1s=c1.sourceCandidatePtr(i1);
+            for(unsigned int i2 = 0 ; i2 < c2.numberOfSourceCandidatePtrs();i2++) {
+                if(c2.sourceCandidatePtr(i2)==c1s) return true;
+            }
+    }
+    return false;
+}
+
 template<typename T> void
 LeptonIdentifier::addCommonUserFloats(T& lepton)
 {
@@ -455,12 +468,11 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    pat::Jet matchedJet;
    pat::Jet matchedJetL1;
    pat::Jet matchedJetRaw;
-   double dR = 666.;
 
+   // match lep and jet by jet constituents
+   bool foundmatch = false;
    for (const auto &j : jets_) {
-      double newDR = reco::deltaR(j.eta(), j.phi(), lepton.eta(), lepton.phi());
-      if (newDR < dR and newDR < .4) {
-         dR = newDR;
+      if (matchByCommonSourceCandidatePtr(lepton, j)) {
          matchedJet = j;
          matchedJetL1 = j;
          matchedJetRaw = j;
@@ -469,19 +481,35 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          matchedJetRaw.setP4(j.correctedJet(0).p4());
          corr_factor = j.p4().E() / j.correctedJet(0).p4().E();
          L1_SF = matchedJetL1.p4().E() / matchedJetRaw.p4().E();
+
+         foundmatch = true;
+        
+         //assert(fabs(L1_SF-j.jecFactor("L1FastJet")/j.jecFactor("Uncorrected"))<1e-4);
+         break;
       }
    }
 
-   lepton.addUserFloat("nearestJetDr", std::min(dR, 0.5)); // no longer used in MVA
+   /*
+   std::cout << "=====================================================" << std::endl;
+   std::cout << "lep:\t pt = "<< lepton.pt() << "\t eta = "<<lepton.eta()<<"\t phi = "<< lepton.phi() << "\t mass = " << lepton.mass() << std::endl;
+   std::cout << "jet:\t pt = "<< matchedJet.p4().pt() << "\t eta = "<<matchedJet.p4().eta()<<"\t phi = "<< matchedJet.p4().phi() << "\t mass = " << matchedJet.mass() << std::endl;
+   std::cout << "vtx:\t x = " <<vertex_.position().X() << "\t y = "<< vertex_.position().Y()<<"\t z = " << vertex_.position().Z() << std::endl;
+   //std::cout << "lepton vtx:\t x = " << lepton.vertex().X() << "\t y = " << lepton.vertex().Y() << "\t z = " << lepton.vertex().Z() << std::endl;
+   std::cout << "raw jet:\t pt = "<<matchedJetRaw.pt() << "\t eta = " << matchedJetRaw.eta() << "\t phi = " << matchedJetRaw.phi() << "\t mass = " << matchedJetRaw.mass() << std::endl;
+   std::cout << "L1corr jet:\t pt = "<<matchedJetL1.pt() << "\t eta = " << matchedJetL1.eta() << "\t phi = " << matchedJetL1.phi() << "\t mass = " << matchedJetL1.mass() << std::endl;
+   std::cout << "L1FastJet corr factor = " << L1_SF << std::endl;
+   std::cout << "jecFactor('L1FastJet') = " << matchedJet.jecFactor("L1FastJet") << std::endl;
+   std::cout << "jecFactor('Uncorrected') = " << matchedJet.jecFactor("Uncorrected") << std::endl;
+   */
 
    float njet_csv = 0;
    float njet_pt_ratio = 1.;
    float njet_pt_rel = 0.;
    float njet_ndau_charged = 0.;
 
-   if (jets_.size() > 0 and dR < .4) {
+   if (foundmatch) {
+      
       njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-      //njet_csv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
       if (njet_csv < 0)
          njet_csv = -10.;
 
@@ -504,14 +532,24 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
                std::fabs(trk.dxy(vtx_position))<0.2 &&
                std::fabs(trk.dz(vtx_position))<17
                ) isgoodtrk = true;
-    
+
+            /*
+            std::cout << "#"<<i<<" daughter:\t pt = " << dau_jet.p4().pt() << "\t eta = "<<dau_jet.p4().eta() << "\t phi = " << dau_jet.p4().phi() << "\t mass = " << dau_jet.p4().mass()<< "\t charge = " << \
+               dau_jet.charge() << "\t fromPV = "<< dau_jet.fromPV() << "\t dR(dau,jet) = " << dR << "\t dR(dau,lep) = " << reco::deltaR(dau_jet.eta(), dau_jet.phi(),lepton.eta(),lepton.phi()) << std::endl;
+            if (isgoodtrk) {
+               std::cout << "pseudoTrack:\t pt = " << trk.pt() << "\t nofValidHits = " << trk.hitPattern().numberOfValidHits() << "\t nofValidPixelHits = " << trk.hitPattern().numberOfValidPixelHits() << "\t \
+chi2 = " << trk.normalizedChi2() << "\t abs(dxy) = " << std::fabs(trk.dxy(vtx_position)) << "\t abs(dz) = " << std::fabs(trk.dz(vtx_position)) << "\t isGoodTrack = " << isgoodtrk << std::endl;
+            }
+            */
             if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
          } catch(...){}
          
       }
-
-
-      if (dR <= 0.4 and (matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
+      /*
+      std::cout << "total number of daughters: " << njet_ndau_charged << std::endl;
+      std::cout << "=====================================================" << std::endl;
+      */
+      if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
          if ((matchedJet.p4() * (1. / corr_factor) - lepton.p4()).Rho() < 1e-4)
             lepAwareJetp4 = lepton.p4();
@@ -523,6 +561,10 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
 
          if ((j4 - l4).Rho() < 1e-4) njet_pt_rel = 0.;
          else njet_pt_rel = l4.Perp((j4 - l4).Vect());
+         /*
+         std::cout << "lepAware jet:\t pt = " << j4.Pt()<<"\t eta = " <<j4.Eta()<<"\t phi = " <<j4.Phi()<<"\t mass = " << j4.M() << std::endl;
+         std::cout << "ptratio = " << njet_pt_ratio << "\t ptrel = " << njet_pt_rel << std::endl;
+         */
       }
    }
 
