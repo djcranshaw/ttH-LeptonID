@@ -2,7 +2,6 @@
 <use name="FWCore/Framework"/>
 <use name="FWCore/PluginManager"/>
 <use name="FWCore/ParameterSet"/>
-<use name="MiniAOD/MiniAODHelper"/>
 <use name="root"/>
 <use name="roottmva"/>
 <flags EDM_PLUGIN="1"/>
