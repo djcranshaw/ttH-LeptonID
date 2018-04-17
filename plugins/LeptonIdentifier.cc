@@ -518,7 +518,10 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
 
          const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
-         float dR = reco::deltaR(matchedJet.eta(),matchedJet.phi(),
+         //float dR = reco::deltaR(matchedJet.eta(),matchedJet.phi(),
+         //                        dau_jet.p4().eta(), dau_jet.p4().phi());
+         // To match nanoAOD
+         float dR = reco::deltaR(lepton.eta(),lepton.phi(),
                                  dau_jet.p4().eta(), dau_jet.p4().phi());
          
          bool isgoodtrk = false;
@@ -826,7 +829,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
 
-      ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfAllHits(reco::HitPattern::MISSING_INNER_HITS));
+      //ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfAllHits(reco::HitPattern::MISSING_INNER_HITS));
+      ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS));
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
       ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
       ele.addUserFloat("isMediumMuon", 0.);
