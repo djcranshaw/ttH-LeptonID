@@ -491,19 +491,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       }
    }
 
-   /*
-   std::cout << "=====================================================" << std::endl;
-   std::cout << "lep:\t pt = "<< lepton.pt() << "\t eta = "<<lepton.eta()<<"\t phi = "<< lepton.phi() << "\t mass = " << lepton.mass() << std::endl;
-   std::cout << "jet:\t pt = "<< matchedJet.p4().pt() << "\t eta = "<<matchedJet.p4().eta()<<"\t phi = "<< matchedJet.p4().phi() << "\t mass = " << matchedJet.mass() << std::endl;
-   std::cout << "vtx:\t x = " <<vertex_.position().X() << "\t y = "<< vertex_.position().Y()<<"\t z = " << vertex_.position().Z() << std::endl;
-   //std::cout << "lepton vtx:\t x = " << lepton.vertex().X() << "\t y = " << lepton.vertex().Y() << "\t z = " << lepton.vertex().Z() << std::endl;
-   std::cout << "raw jet:\t pt = "<<matchedJetRaw.pt() << "\t eta = " << matchedJetRaw.eta() << "\t phi = " << matchedJetRaw.phi() << "\t mass = " << matchedJetRaw.mass() << std::endl;
-   std::cout << "L1corr jet:\t pt = "<<matchedJetL1.pt() << "\t eta = " << matchedJetL1.eta() << "\t phi = " << matchedJetL1.phi() << "\t mass = " << matchedJetL1.mass() << std::endl;
-   std::cout << "L1FastJet corr factor = " << L1_SF << std::endl;
-   std::cout << "jecFactor('L1FastJet') = " << matchedJet.jecFactor("L1FastJet") << std::endl;
-   std::cout << "jecFactor('Uncorrected') = " << matchedJet.jecFactor("Uncorrected") << std::endl;
-   */
-
    float njet_csv = 0;
    float njet_pt_ratio = 1.;
    float njet_pt_rel = 0.;
@@ -515,46 +502,35 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       if (njet_csv < 0)
          njet_csv = -10.;
 
-      for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
-
-         const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
-         //float dR = reco::deltaR(matchedJet.eta(),matchedJet.phi(),
-         //                        dau_jet.p4().eta(), dau_jet.p4().phi());
-         // To match nanoAOD
-         float dR = reco::deltaR(lepton.eta(),lepton.phi(),
-                                 dau_jet.p4().eta(), dau_jet.p4().phi());
-         
-         bool isgoodtrk = false;
-         try {
-            const reco::Track trk = dau_jet.pseudoTrack();
-            //const math::XYZPoint vtx_position = lepton.vertex();
-            const auto vtx_position = vertex_.position();
-         
-            if(trk.pt()>1 &&
-               trk.hitPattern().numberOfValidHits()>=8 &&
-               trk.hitPattern().numberOfValidPixelHits()>=2 &&
-               trk.normalizedChi2()<5 &&
-               std::fabs(trk.dxy(vtx_position))<0.2 &&
-               std::fabs(trk.dz(vtx_position))<17
-               ) isgoodtrk = true;
-
-            /*
-            std::cout << "#"<<i<<" daughter:\t pt = " << dau_jet.p4().pt() << "\t eta = "<<dau_jet.p4().eta() << "\t phi = " << dau_jet.p4().phi() << "\t mass = " << dau_jet.p4().mass()<< "\t charge = " << \
-               dau_jet.charge() << "\t fromPV = "<< dau_jet.fromPV() << "\t dR(dau,jet) = " << dR << "\t dR(dau,lep) = " << reco::deltaR(dau_jet.eta(), dau_jet.phi(),lepton.eta(),lepton.phi()) << std::endl;
-            if (isgoodtrk) {
-               std::cout << "pseudoTrack:\t pt = " << trk.pt() << "\t nofValidHits = " << trk.hitPattern().numberOfValidHits() << "\t nofValidPixelHits = " << trk.hitPattern().numberOfValidPixelHits() << "\t \
-chi2 = " << trk.normalizedChi2() << "\t abs(dxy) = " << std::fabs(trk.dxy(vtx_position)) << "\t abs(dz) = " << std::fabs(trk.dz(vtx_position)) << "\t isGoodTrack = " << isgoodtrk << std::endl;
-            }
-            */
-            if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
-         } catch(...){}
-         
-      }
-      /*
-      std::cout << "total number of daughters: " << njet_ndau_charged << std::endl;
-      std::cout << "=====================================================" << std::endl;
-      */
       if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
+         for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
+            
+            const pat::PackedCandidate &dau_jet = dynamic_cast<const pat::PackedCandidate &>(*(matchedJet.sourceCandidatePtr(i)));
+            //float dR = reco::deltaR(matchedJet.eta(),matchedJet.phi(),
+            //                        dau_jet.p4().eta(), dau_jet.p4().phi());
+            // To match nanoAOD
+            float dR = reco::deltaR(lepton.eta(),lepton.phi(),
+                                    dau_jet.p4().eta(), dau_jet.p4().phi());
+            
+            bool isgoodtrk = false;
+            try {
+               const reco::Track trk = dau_jet.pseudoTrack();
+               //const math::XYZPoint vtx_position = lepton.vertex();
+               const auto vtx_position = vertex_.position();
+               
+               if(trk.pt()>1 &&
+                  trk.hitPattern().numberOfValidHits()>=8 &&
+                  trk.hitPattern().numberOfValidPixelHits()>=2 &&
+                  trk.normalizedChi2()<5 &&
+                  std::fabs(trk.dxy(vtx_position))<0.2 &&
+                  std::fabs(trk.dz(vtx_position))<17
+                  ) isgoodtrk = true;
+               
+               if( dR<=0.4 && dau_jet.charge()!=0 && dau_jet.fromPV()>1 && isgoodtrk) njet_ndau_charged++;
+            } catch(...){}
+            
+         }
+      
          auto lepAwareJetp4 = (matchedJet.p4() * (1. / corr_factor) - lepton.p4() * (1. / L1_SF)) * corr_factor + lepton.p4(); // "lep-aware" JEC
          if ((matchedJet.p4() * (1. / corr_factor) - lepton.p4()).Rho() < 1e-4)
             lepAwareJetp4 = lepton.p4();
@@ -566,13 +542,9 @@ chi2 = " << trk.normalizedChi2() << "\t abs(dxy) = " << std::fabs(trk.dxy(vtx_po
 
          if ((j4 - l4).Rho() < 1e-4) njet_pt_rel = 0.;
          else njet_pt_rel = l4.Perp((j4 - l4).Vect());
-         /*
-         std::cout << "lepAware jet:\t pt = " << j4.Pt()<<"\t eta = " <<j4.Eta()<<"\t phi = " <<j4.Phi()<<"\t mass = " << j4.M() << std::endl;
-         std::cout << "ptratio = " << njet_pt_ratio << "\t ptrel = " << njet_pt_rel << std::endl;
-         */
       }
    }
-
+   
    lepton.addUserFloat("nearestJetCsv", njet_csv);
    lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
    lepton.addUserFloat("nearestJetPtRel", njet_pt_rel);
