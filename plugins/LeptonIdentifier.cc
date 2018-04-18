@@ -285,7 +285,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          break;
       case fakeable:
          if (mu.userFloat("leptonMVA") > 0.90)
-            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < medium_csv_wp;
+            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < 0.8484;
          else
             passesID = passesPreselection and mu.userFloat("nearestJetCsv") < 0.3 and mu.userFloat("nearestJetPtRatio") > 0.5 and mu.segmentCompatibility() > 0.3;
          //passesIso = true;
@@ -384,9 +384,9 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case fakeable:
          if (ele.userFloat("leptonMVA") > 0.90)
-            passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < 0.8484;
          else
-            passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.5;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < 0.3 && ele.userFloat("nearestJetPtRatio") > 0.5;
          
          passesID = passesPreselection and
                     passesCuts and
