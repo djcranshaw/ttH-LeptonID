@@ -386,7 +386,7 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          if (ele.userFloat("leptonMVA") > 0.90)
             passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
          else
-            passesJetCSV = ele.userFloat("nearestJetCsv") < loose_csv_wp && ele.userFloat("nearestJetPtRatio") > 0.5;
+            passesJetCSV = ele.userFloat("nearestJetCsv") < 0.3 && ele.userFloat("nearestJetPtRatio") > 0.5;
          
          passesID = passesPreselection and
                     passesCuts and
