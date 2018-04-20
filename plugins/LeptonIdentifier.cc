@@ -207,9 +207,9 @@ LeptonIdentifier::mva(const pat::Muon &mu)
    varchRelIso = mu.userFloat("miniAbsIsoCharged") / mu.pt();
    varneuRelIso = mu.userFloat("miniAbsIsoNeutralcorr") / mu.pt();
    varjetPtRel_in = mu.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = (mu.userFloat("nearestJetCsv") > -5.) ?
-      std::min(mu.userFloat("nearestJetPtRatio"), 1.5f) :
-      (1./(1.+mu.userFloat("relIso04")));
+   varjetPtRatio_in = (mu.userFloat("nearestJetCsv") > -99.) ?
+      std::min(mu.userFloat("nearestJetPtRatio"), 1.5f) :  // found matched jet
+      (1./(1.+mu.userFloat("relIso04")));  // no matched jet
    varjetBTagCSV_in = std::max(mu.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = mu.userFloat("nearestJetNDauCharged");
    varsip3d = mu.userFloat("sip3D");
@@ -228,9 +228,9 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varchRelIso = ele.userFloat("miniAbsIsoCharged") / ele.pt();
    varneuRelIso = ele.userFloat("miniAbsIsoNeutralcorr") / ele.pt();
    varjetPtRel_in = ele.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = (ele.userFloat("nearestJetCsv") > -5.) ?
-      std::min(ele.userFloat("nearestJetPtRatio"), 1.5f) :
-      (1./(1.+ele.userFloat("relIso04")));
+   varjetPtRatio_in = (ele.userFloat("nearestJetCsv") > -99.) ?
+      std::min(ele.userFloat("nearestJetPtRatio"), 1.5f) :  // found matched jet
+      (1./(1.+ele.userFloat("relIso04")));  // no matched jets
    varjetBTagCSV_in = std::max(ele.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = ele.userFloat("nearestJetNDauCharged");
    varsip3d = ele.userFloat("sip3D");
@@ -491,7 +491,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       }
    }
 
-   float njet_csv = 0;
+   float njet_csv = -100.;
    float njet_pt_ratio = 1.;
    float njet_pt_rel = 0.;
    float njet_ndau_charged = 0.;
@@ -499,8 +499,6 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    if (foundmatch) {
       
       njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-      if (njet_csv < 0)
-         njet_csv = -10.;
 
       if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
