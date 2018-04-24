@@ -534,8 +534,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
          if ((matchedJet.p4() * (1. / corr_factor) - lepton.p4()).Rho() < 1e-4)
             lepAwareJetp4 = lepton.p4();
 
-         //njet_pt_ratio = std::min(lepton.pt() / lepAwareJetp4.pt(), 1.5);
-         njet_pt_ratio = lepton.pt() / lepAwareJetp4.pt();
+         njet_pt_ratio = std::min(lepton.pt() / lepAwareJetp4.pt(), 1.5);
 
          TLorentzVector l4 = TLorentzVector(lepton.p4().Px(), lepton.p4().Py(), lepton.p4().Pz(), lepton.p4().E());
          TLorentzVector j4 = TLorentzVector(lepAwareJetp4.Px(), lepAwareJetp4.Py(), lepAwareJetp4.Pz(), lepAwareJetp4.E());
