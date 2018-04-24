@@ -400,7 +400,8 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
                     passesCuts and
                     ele.userFloat("leptonMVA") > 0.90 and
                     ele.userFloat("nearestJetCsv") < medium_csv_wp and
-                    ele.userFloat("numMissingHits") == 0;
+                    ele.userFloat("numMissingHits") == 0 and
+                    ele.passConversionVeto();
          passesKinematics = passesKinematics and
                             (ele.userFloat("correctedPt") > minElectronConePt);
          break;
