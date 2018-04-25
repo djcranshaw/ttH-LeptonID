@@ -115,8 +115,10 @@ private:
    double mu_minpt_;
    double ele_minpt_;
    double tau_minpt_;
-   double loose_csv_wp; //= .46;
-   double medium_csv_wp; //= .80;
+   //double loose_csv_wp; //= .46;
+   //double medium_csv_wp; //= .80;
+   double loose_deepcsv_wp;
+   double medium_deepcsv_wp;
 
    std::string jectag_;
 
@@ -138,8 +140,8 @@ LeptonIdentifier::LeptonIdentifier(const edm::ParameterSet &config)
       : mu_minpt_(config.getParameter<double>("muonMinPt")),
         ele_minpt_(config.getParameter<double>("electronMinPt")),
         tau_minpt_(config.getParameter<double>("tauMinPt")),
-        loose_csv_wp(config.getParameter<double>("LooseCSVWP")),
-        medium_csv_wp(config.getParameter<double>("MediumCSVWP")),
+        loose_deepcsv_wp(config.getParameter<double>("LooseCSVWP")),
+        medium_deepcsv_wp(config.getParameter<double>("MediumCSVWP")),
         jectag_(config.getParameter<std::string>("JECTag")),
         hip_safe_(config.getParameter<bool>("IsHIPSafe"))
 {
@@ -285,9 +287,9 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          break;
       case fakeable:
          if (mu.userFloat("leptonMVA") > 0.90)
-            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < medium_csv_wp;
+            passesID = passesPreselection and mu.userFloat("nearestJetDeepCsv") < medium_deepcsv_wp;
          else
-            passesID = passesPreselection and mu.userFloat("nearestJetCsv") < 0.3 and mu.userFloat("nearestJetPtRatio") > 0.5 and mu.segmentCompatibility() > 0.3;
+            passesID = passesPreselection and mu.userFloat("nearestJetDeepCsv") < 0.07 and mu.userFloat("nearestJetPtRatio") > 0.6 and mu.segmentCompatibility() > 0.3;
          //passesIso = true;
          passesKinematics =
             passesKinematics and (mu.userFloat("correctedPt") > minMuonConePt);
@@ -296,7 +298,7 @@ LeptonIdentifier::passes(const pat::Muon &mu, ID id)
          //passesIso = true;
          passesID = passesPreselection and
             (mu.userFloat("leptonMVA") > 0.90) and
-            (mu.userFloat("nearestJetCsv") < medium_csv_wp) and
+            (mu.userFloat("nearestJetDeepCsv") < medium_deepcsv_wp) and
             mu.userFloat("isMediumMuon");
             //isMediumMuon(mu, hip_safe_);
          passesKinematics =
@@ -348,32 +350,17 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 
    bool passesPreselection = passGsfTrackID and ele.userFloat("sip3D") < 8 and passesMvaWP;
 
-   bool passesCuts = false;
-   if (fabs(ele.eta()) < 0.8) {
-      passesCuts = ele.full5x5_sigmaIetaIeta() < 0.011 &&
-         ele.hcalOverEcal() < 0.10 &&
-         fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.01 &&
-         fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.04 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() > -0.05 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() < 0.010;
+   bool passTriggerIDCuts = false;
+   double invEminusinvP =
+      1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy();
+   if (scEta < 1.479) {
+      passTriggerIDCuts = ele.full5x5_sigmaIetaIeta() < 0.011 and
+         ele.hcalOverEcal() < 0.10 and invEminusinvP > -0.04;
    }
-   else if (fabs(ele.eta()) < 1.479) {
-      passesCuts = ele.full5x5_sigmaIetaIeta() < 0.011 &&
-         ele.hcalOverEcal() < 0.10 &&
-         fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.01 &&
-         fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.04 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() > -0.05 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() < 0.010;
+   else if (scEta < 2.5) {
+      passTriggerIDCuts = ele.full5x5_sigmaIetaIeta() < 0.030 and
+         ele.hcalOverEcal() < 0.10 and invEminusinvP > -0.04;
    }
-   else if (fabs(ele.eta()) < 2.5) {
-      passesCuts = ele.full5x5_sigmaIetaIeta() < 0.030 &&
-         ele.hcalOverEcal() < 0.07 &&
-         fabs(ele.deltaEtaSuperClusterTrackAtVtx()) < 0.008 &&
-         fabs(ele.deltaPhiSuperClusterTrackAtVtx()) < 0.07 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() > -0.05 &&
-         1.0/ele.ecalEnergy() - ele.eSuperClusterOverP()/ele.ecalEnergy() < 0.005;
-   }
-
 
    bool passesID = false;
    bool passesJetCSV = false;
@@ -384,12 +371,12 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case fakeable:
          if (ele.userFloat("leptonMVA") > 0.90)
-            passesJetCSV = ele.userFloat("nearestJetCsv") < medium_csv_wp;
+            passesJetCSV = ele.userFloat("nearestJetDeepCsv") < medium_deepcsv_wp;
          else
-            passesJetCSV = ele.userFloat("nearestJetCsv") < 0.3 && ele.userFloat("nearestJetPtRatio") > 0.5;
+            passesJetCSV = ele.userFloat("nearestJetDeepCsv") < 0.07 && ele.userFloat("nearestJetPtRatio") > 0.6 && ele.userFloat("eleMvaId") > 0.5;
          
          passesID = passesPreselection and
-                    passesCuts and
+                    passTriggerIDCuts and
                     passesJetCSV and
                     ele.userFloat("numMissingHits") == 0;
          passesKinematics = passesKinematics and
@@ -397,9 +384,9 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
       case mvabased:
          passesID = passesPreselection and
-                    passesCuts and
+                    passTriggerIDCuts and
                     ele.userFloat("leptonMVA") > 0.90 and
-                    ele.userFloat("nearestJetCsv") < medium_csv_wp and
+                    ele.userFloat("nearestJetDeepCsv") < medium_deepcsv_wp and
                     ele.userFloat("numMissingHits") == 0 and
                     ele.passConversionVeto();
          passesKinematics = passesKinematics and
@@ -493,6 +480,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    }
 
    float njet_csv = -100.;
+   float njet_deepcsv = -100.;
    float njet_pt_ratio = 1.;
    float njet_pt_rel = 0.;
    float njet_ndau_charged = 0.;
@@ -500,6 +488,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    if (foundmatch) {
       
       njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
+      njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
 
       if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
@@ -546,6 +535,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    }
    
    lepton.addUserFloat("nearestJetCsv", njet_csv);
+   lepton.addUserFloat("nearestJetDeepCsv", njet_deepcsv);
    lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
    lepton.addUserFloat("nearestJetPtRel", njet_pt_rel);
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
