@@ -488,7 +488,9 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    if (foundmatch) {
       
       njet_csv = matchedJet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-      njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
+      //njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
+      njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVJetTags:probb")
+         + matchedJet.bDiscriminator("pfDeepCSVJetTags:probbb");
 
       if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
