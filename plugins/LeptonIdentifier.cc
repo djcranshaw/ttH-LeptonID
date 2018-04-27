@@ -209,9 +209,7 @@ LeptonIdentifier::mva(const pat::Muon &mu)
    varchRelIso = mu.userFloat("miniAbsIsoCharged") / mu.pt();
    varneuRelIso = mu.userFloat("miniAbsIsoNeutralcorr") / mu.pt();
    varjetPtRel_in = mu.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = (mu.userFloat("nearestJetCsv") > -99.) ?
-      std::min(mu.userFloat("nearestJetPtRatio"), 1.5f) :  // found matched jet
-      (1./(1.+mu.userFloat("relIso04")));  // no matched jet
+   varjetPtRatio_in = mu.userFloat("nearestJetPtRatio");
    varjetBTagCSV_in = std::max(mu.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = mu.userFloat("nearestJetNDauCharged");
    varsip3d = mu.userFloat("sip3D");
@@ -230,9 +228,7 @@ LeptonIdentifier::mva(const pat::Electron &ele)
    varchRelIso = ele.userFloat("miniAbsIsoCharged") / ele.pt();
    varneuRelIso = ele.userFloat("miniAbsIsoNeutralcorr") / ele.pt();
    varjetPtRel_in = ele.userFloat("nearestJetPtRel");
-   varjetPtRatio_in = (ele.userFloat("nearestJetCsv") > -99.) ?
-      std::min(ele.userFloat("nearestJetPtRatio"), 1.5f) :  // found matched jet
-      (1./(1.+ele.userFloat("relIso04")));  // no matched jets
+   varjetPtRatio_in = ele.userFloat("nearestJetPtRatio");
    varjetBTagCSV_in = std::max(ele.userFloat("nearestJetCsv"), 0.f);
    varjetNDauCharged_in = ele.userFloat("nearestJetNDauCharged");
    varsip3d = ele.userFloat("sip3D");
@@ -538,7 +534,10 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
    
    lepton.addUserFloat("nearestJetCsv", njet_csv);
    lepton.addUserFloat("nearestJetDeepCsv", njet_deepcsv);
-   lepton.addUserFloat("nearestJetPtRatio", njet_pt_ratio);
+   assert(lepton.hasUserFloat("relIso04"));
+   float jetptratiov2 = (foundmatch) ? std::min(njet_pt_ratio ,1.5f) : 
+      (1./(1.+lepton.userFloat("relIso04")));
+   lepton.addUserFloat("nearestJetPtRatio", jetptratiov2);
    lepton.addUserFloat("nearestJetPtRel", njet_pt_rel);
    lepton.addUserFloat("nearestJetNDauCharged", njet_ndau_charged);
    auto mva_value = mva(lepton);
@@ -550,7 +549,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       }
    else
       {
-         lepton.addUserFloat("correctedPt", .90 * lepton.pt() / njet_pt_ratio);
+         lepton.addUserFloat("correctedPt", .90 * lepton.pt() / jetptratiov2);
       }
       
    lepton.addUserFloat("idPreselection", passes(lepton, preselection));
