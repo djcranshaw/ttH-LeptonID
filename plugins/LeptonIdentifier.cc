@@ -487,6 +487,7 @@ LeptonIdentifier::addCommonUserFloats(T& lepton)
       //njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVDiscriminatorsJetTags:BvsAll");
       njet_deepcsv = matchedJet.bDiscriminator("pfDeepCSVJetTags:probb")
          + matchedJet.bDiscriminator("pfDeepCSVJetTags:probbb");
+      if (isnan(njet_deepcsv)) njet_deepcsv = -2.;
 
       if ((matchedJet.correctedJet(0).p4() - lepton.p4()).Rho() >= 1e-4) {
          for (unsigned int i = 0, n = matchedJet.numberOfSourceCandidatePtrs(); i < n; ++i) {
