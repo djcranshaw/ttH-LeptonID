@@ -374,7 +374,8 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          passesID = passesPreselection and
                     passTriggerIDCuts and
                     passesJetCSV and
-                    ele.userFloat("numMissingHits") == 0;
+                    ele.userFloat("numMissingHits") == 0 and
+                    ele.passConversionVeto();
          passesKinematics = passesKinematics and
                             (ele.userFloat("correctedPt") > minElectronConePt);
          break;
