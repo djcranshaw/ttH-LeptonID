@@ -797,7 +797,8 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       //ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfAllHits(reco::HitPattern::MISSING_INNER_HITS));
       ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS));
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
-      ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
+      //ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
+      ele.addUserFloat("eleMvaId", ele.userFloat("ElectronMVAEstimatorRun2Fall17NoIsoV1Values"));
       ele.addUserFloat("isMediumMuon", 0.);
 
       addCommonUserFloats(ele);
