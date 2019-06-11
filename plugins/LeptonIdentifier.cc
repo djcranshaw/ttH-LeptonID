@@ -63,6 +63,7 @@ private:
    bool passes(const pat::Electron &e, ID id);
    bool passes(const pat::Muon &mu, ID id);
    bool passes(const pat::Tau &tau, ID id);
+   bool isCrowdedElectron(const pat::Electron &ele, pat::MuonCollection &mus);
 
    float mva(const pat::Muon &mu);
    float mva(const pat::Electron &ele);
@@ -325,24 +326,28 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
 
    float scEta = fabs(ele.userFloat("superClusterEta"));
    double eleMva = ele.userFloat("eleMvaId");
+   //ele.addUserFloat("eleMvaId",0.6);
    // Loose Fall17noIso
-   bool passesMvaWP = false;
-   if (ele.pt() <= 10.) {
-      if (scEta < 0.8)
-         passesMvaWP = eleMva > -0.13285867293779202;
-      else if (scEta < 1.479)
-         passesMvaWP = eleMva > -0.31765300958836074;
-      else
-         passesMvaWP = eleMva > -0.0799205914718861;
-   }
-   else {
-      if (scEta < 0.8)
-         passesMvaWP = eleMva > -0.856871961305474;
-      else if (scEta < 1.479)
-         passesMvaWP = eleMva > -0.8107642141584835;
-      else
-         passesMvaWP = eleMva > -0.7179265933023059;
-   }
+   //bool passesMvaWP = ele.electronID("mvaEleID-Fall17-noIso-V2-wp80");
+   //bool passesMvaWP = ele.electronID("mvaEleID-Fall17-noIso-V2-wp90");
+   bool passesMvaWP = ele.electronID("mvaEleID-Fall17-noIso-V2-wpLoose");
+//   bool passesMvaWP = false;
+//   if (ele.pt() <= 10.) {
+//      if (scEta < 0.8)
+//         passesMvaWP = eleMva > -0.13285867293779202;
+//      else if (scEta < 1.479)
+//         passesMvaWP = eleMva > -0.31765300958836074;
+//      else
+//         passesMvaWP = eleMva > -0.0799205914718861;
+//   }
+//   else {
+//      if (scEta < 0.8)
+//         passesMvaWP = eleMva > -0.856871961305474;
+//      else if (scEta < 1.479)
+//         passesMvaWP = eleMva > -0.8107642141584835;
+//      else
+//         passesMvaWP = eleMva > -0.7179265933023059;
+//   }
 
    bool passesPreselection = passGsfTrackID and ele.userFloat("sip3D") < 8 and passesMvaWP;
 
@@ -397,6 +402,11 @@ LeptonIdentifier::passes(const pat::Electron &ele, ID id)
          break;
    }
 
+   //std::cout << std::endl;
+   //std::cout << "passGsfTrackID: " << passGsfTrackID << std::endl;
+   //std::cout << "passesMvaWP: " << passesMvaWP << std::endl;
+   //std::cout << "passesKinematics: " << passesKinematics << std::endl;
+   //std::cout << "passesIso: " << passesIso << std::endl << std::endl;
    return (passesKinematics && passesIso && passesID);
 }
 
@@ -635,15 +645,20 @@ float LeptonIdentifier::effectiveArea(const pat::Muon& mu)
    //assert(fabs(eta) <= 2.5);
    
    if (fabs(eta) < 0.8)
-      return 0.0566;
+//      return 0.0566;
+     return 0.0735;
    else if (fabs(eta) < 1.3)
-      return 0.0562;
+//      return 0.0562;
+     return 0.0619;
    else if (fabs(eta) < 2.0)
-      return 0.0363;
+//      return 0.0363;
+     return 0.0465;
    else if (fabs(eta) < 2.2)
-      return 0.0119;
+//      return 0.0119;
+     return 0.0433;
    else if (fabs(eta) <= 2.5)
-      return 0.0064;
+//      return 0.0064;
+     return 0.0577;
    else
       return 0.;
 }
@@ -662,19 +677,26 @@ float LeptonIdentifier::effectiveArea(const pat::Electron& ele)
    //assert(fabs(eta) <= 2.5);
 
    if (fabs(eta) < 1.0)
-      return 0.1566;
+//      return 0.1566;
+     return 0.1752;
    else if (fabs(eta) < 1.479)
-      return 0.1626;
+//      return 0.1626;
+     return 0.1862;
    else if (fabs(eta) < 2.0)
-      return 0.1073;
+//      return 0.1073;
+     return 0.1411;
    else if (fabs(eta) < 2.2)
-      return 0.0854;
+//      return 0.0854;
+     return 0.1534;
    else if (fabs(eta) < 2.3)
-      return 0.1051;
+//      return 0.1051;
+     return 0.1903;
    else if (fabs(eta) < 2.4)
-      return 0.1204;
+//      return 0.1204;
+     return 0.2243;
    else if (fabs(eta) <= 2.5)
-      return 0.1524;
+//      return 0.1524;
+     return 0.2687;
    else
       return 0.;
 }
@@ -719,11 +741,11 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    // determine primary vertex
    bool valid = false;
    for (const auto &v : *input_vtx) {
-      if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
-         vertex_ = v;
-         valid = true;
-         break;
-      }
+     if (!v.isFake() && v.ndof() >= 4 && abs(v.z()) <= 24. && abs(v.position().Rho()) <= 2.) {
+       vertex_ = v;
+       valid = true;
+       break;
+     }
    }
 
    if (not valid) {
@@ -740,14 +762,21 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
          continue;
 
       // add members
-      if (mu.innerTrack().isAvailable()) // muonBestTrack
+//      if (mu.bestTrack()->isAvailable()) // muonBestTrack
+      if (true)
       {
-         mu.addUserFloat("dxy", mu.innerTrack()->dxy(vertex_.position()));
-         mu.addUserFloat("dz", mu.innerTrack()->dz(vertex_.position()));
-         mu.addUserFloat("numValidPixelHits", mu.innerTrack()->hitPattern().numberOfValidPixelHits());
-         mu.addUserFloat("trackerLayersWithMeasurement", mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
-         mu.addUserFloat("chargeFlip", mu.innerTrack()->ptError() / mu.innerTrack()->pt());
-         mu.addUserFloat("validFraction", mu.innerTrack()->validFraction());
+//         mu.addUserFloat("dxy", mu.innerTrack()->dxy(vertex_.position()));
+//         mu.addUserFloat("dz", mu.innerTrack()->dz(vertex_.position()));
+//         mu.addUserFloat("numValidPixelHits", mu.innerTrack()->hitPattern().numberOfValidPixelHits());
+//         mu.addUserFloat("trackerLayersWithMeasurement", mu.innerTrack()->hitPattern().trackerLayersWithMeasurement());
+//         mu.addUserFloat("chargeFlip", mu.innerTrack()->ptError() / mu.innerTrack()->pt());
+//         mu.addUserFloat("validFraction", mu.innerTrack()->validFraction());
+         mu.addUserFloat("dxy", mu.bestTrack()->dxy(vertex_.position()));
+         mu.addUserFloat("dz", mu.bestTrack()->dz(vertex_.position()));
+         mu.addUserFloat("numValidPixelHits", mu.bestTrack()->hitPattern().numberOfValidPixelHits());
+         mu.addUserFloat("trackerLayersWithMeasurement", mu.bestTrack()->hitPattern().trackerLayersWithMeasurement());
+         mu.addUserFloat("chargeFlip", mu.bestTrack()->ptError() / mu.bestTrack()->pt());
+         mu.addUserFloat("validFraction", mu.bestTrack()->validFraction());
       } else {
          mu.addUserFloat("dxy", -666.);
          mu.addUserFloat("dz", -666.);
@@ -790,6 +819,9 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
 
       addIsolationFloats(ele);
 
+      // Maybe the wrong approach
+      ele.setP4(ele.p4() * ele.userFloat("ecalTrkEnergyPostCorr") / ele.energy());
+
       ele.addUserFloat("superClusterEta", abs(ele.superCluster()->position().eta()));
       ele.addUserFloat("dxy", ele.gsfTrack()->dxy(vertex_.position()));
       ele.addUserFloat("dz", ele.gsfTrack()->dz(vertex_.position()));
@@ -798,12 +830,33 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
       ele.addUserFloat("numMissingHits", ele.gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS));
       ele.addUserFloat("sip3D", fabs(ele.dB(pat::Electron::PV3D) / ele.edB(pat::Electron::PV3D)));
       //ele.addUserFloat("eleMvaId", ele_mvaValues.get(ele_index_for_mva - 1));
-      ele.addUserFloat("eleMvaId", ele.userFloat("ElectronMVAEstimatorRun2Fall17NoIsoV1Values"));
+      ele.addUserFloat("eleMvaId", ele.userFloat("ElectronMVAEstimatorRun2Fall17NoIsoV2Values"));
       ele.addUserFloat("isMediumMuon", 0.);
 
       addCommonUserFloats(ele);
-
+      //std::cout << "PreCleaning idPreselection: " << ele.userFloat("idPreselection") << std::endl;
+      bool isCE = isCrowdedElectron(ele,*mus);
+      if (isCE)
+      {
+        std::cout << "CrowdedElectron Here" << std::endl;
+        ele.addUserFloat("idPreselection", 0., true);
+        ele.addUserFloat("idFakeable", 0.);
+        ele.addUserFloat("idMVABased", 0.);
+      }
       eles->push_back(ele);
+      // TEMP PRINTING
+      //std::cout << "pt: " << ele.pt() << std::endl;
+      //std::cout << "eta: " << ele.eta() << std::endl;
+      //std::cout << "dxy: " << ele.userFloat("dxy") << std::endl;
+      //std::cout << "dx: " << ele.userFloat("dz") << std::endl;
+      //std::cout << "miniRelIso: " << ele.userFloat("miniRelIso") << std::endl;
+      //std::cout << "sip3D: " << ele.userFloat("sip3D") << std::endl;
+      //std::cout << "idPreselection: " << ele.userFloat("idPreselection") << std::endl;
+      //std::cout << "eleMvaId: " << ele.userFloat("eleMvaId") << std::endl;
+      //std::cout << "numMissingHits: " << ele.userFloat("numMissingHits") << std::endl;
+      //std::cout << "corrEt: " << ele.p4() * ele.userFloat("ecalTrkEnergyPostCorr") / ele.energy() << std::endl;
+      // END TEMP PRINTING     
+      
    }
 
 
@@ -865,6 +918,24 @@ LeptonIdentifier::produce(edm::Event &event, const edm::EventSetup &setup)
    event.put(std::move(taus));
 }
 
+bool LeptonIdentifier::isCrowdedElectron(const pat::Electron &ele, pat::MuonCollection &mus)
+{
+   // Clean electron candidates with preselected muons
+   bool crowdedElectron = false;
+   for (auto mu : mus) {
+     if (!passes(mu,preselection)) continue;
+     double muphi = mu.phi();
+     double mueta = mu.eta();
+     double elephi = ele.phi();
+     double eleeta = ele.eta();
+     double dR = sqrt((muphi-elephi)*(muphi-elephi) + (mueta-eleeta)*(mueta-eleeta));
+     //std::cout << "dR: " << dR << std::endl;
+     if (dR < 0.3) crowdedElectron = true;
+   }
+   return crowdedElectron;
+}
+  
+
 // ------------ method called once each job just before starting event loop  ------------
 void
 LeptonIdentifier::beginJob()
@@ -894,7 +965,7 @@ LeptonIdentifier::endRun(edm::Run const&, edm::EventSetup const&)
 */
 
 // ------------ method called when starting to processes a luminosity block  ------------
-/*
+/*!
 void
 LeptonIdentifier::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
